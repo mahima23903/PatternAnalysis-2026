@@ -60,23 +60,26 @@ class Downsample(nn.Module):
 
 #localisation module
 
+
 class LocalizationModule(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
         self.conv1 = nn.Conv2d(
             in_channels,
-            out_channels,
+            in_channels,
             kernel_size=3,
             padding=1
         )
-        self.norm = nn.InstanceNorm2d(out_channels)
+
+        self.norm = nn.InstanceNorm2d(in_channels)
         self.act = nn.LeakyReLU(
             negative_slope=0.01,
             inplace=True
         )
+
         self.conv2 = nn.Conv2d(
-            out_channels,
+            in_channels,
             out_channels,
             kernel_size=1
         )
@@ -86,6 +89,7 @@ class LocalizationModule(nn.Module):
         x = self.act(self.norm(x))
         x = self.conv2(x)
         return x
+
 
 #Upsampling
 
