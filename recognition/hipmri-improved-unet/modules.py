@@ -58,6 +58,34 @@ class Downsample(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
+#localisation module
+
+class LocalizationModule(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            padding=1
+        )
+        self.norm = nn.InstanceNorm2d(out_channels)
+        self.act = nn.LeakyReLU(
+            negative_slope=0.01,
+            inplace=True
+        )
+        self.conv2 = nn.Conv2d(
+            out_channels,
+            out_channels,
+            kernel_size=1
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.act(self.norm(x))
+        x = self.conv2(x)
+        return x
 
 #level 1 testing- testing the ContextModule
 if __name__ == "__main__":
@@ -77,4 +105,15 @@ if __name__ == "__main__":
 
     print("Downsampling input:", x.shape)
     print("Downsampling output:", output.shape)
+
+
+    localization = LocalizationModule(128, 64)
+
+    x = torch.randn(1, 128, 128, 72)
+    output = localization(x)
+
+    print("Localization input:", x.shape)
+    print("Localization output:", output.shape)
+
+
 
