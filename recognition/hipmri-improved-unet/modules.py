@@ -154,11 +154,71 @@ class Encoder(nn.Module):
         return x1, x2, x3, x4, x5
 
 
+class DecoderBlock(nn.Module):
+    def __init__(self, in_channels, skip_channels, out_channels):
+        super().__init__()
+
+        self.upsample = Upsample(in_channels, skip_channels)
+
+        self.localization = LocalizationModule(
+            skip_channels * 2,
+            out_channels
+        )
+
+    def forward(self, x, skip):
+        x = self.upsample(x)
+
+        # Combine decoder and encoder features
+        x = torch.cat([x, skip], dim=1)
+
+        # Refine the combined features
+        x = self.localization(x)
+
+        return x
+
+#Connecting all 4 decoder stages
+
+class Decoder(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.decoder4 = DecoderBlock(256, 128, 128)
+        self.decoder3 = DecoderBlock(128, 64, 64)
+        self.decoder2 = DecoderBlock(64, 32, 32)
+        self.decoder1 = DecoderBlock(32, 16, 16)
+
+    def forward(self, features):
+        x1, x2, x3, x4, x5 = features
+
+        d4 = self.decoder4(x5, x4)
+        d3 = self.decoder3(d4, x3)
+        d2 = self.decoder2(d3, x2)
+        d1 = self.decoder1(d2, x1)
+
+        return d1, d2, d3, d4
+
+#6 class segmentation masks
+
+class SegmentationHead(nn.Module):
+    def __init__(self, in_channels, num_classes=6):
+        super().__init__()
+
+        self.conv = nn.Conv2d(
+            in_channels,
+            num_classes,
+            kernel_size=1
+        )
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+
 #Code sanity check
 if __name__ == "__main__":
     model = ContextModule(channels=32)
 
-    x = torch.randn(1, 32, 256, 144)
+    '''x = torch.randn(1, 32, 256, 144)
     output = model(x)
 
     print("Input shape:", x.shape)
@@ -210,6 +270,46 @@ if __name__ == "__main__":
 
     for i, feature in enumerate(features, start=1):
         print(f"Encoder level {i}:", feature.shape)
+
+    
+    decoder_block = DecoderBlock(256, 128, 128)
+
+    bottleneck = torch.randn(1, 256, 16, 9)
+    skip = torch.randn(1, 128, 32, 18)
+
+    output = decoder_block(bottleneck, skip)
+
+    print("Decoder input:", bottleneck.shape)
+    print("Skip input:", skip.shape)
+    print("Decoder output:", output.shape)'''
+
+    #Testing decoder block
+
+    encoder = Encoder(in_channels=1)
+    decoder = Decoder()
+
+    x = torch.randn(1, 1, 256, 144)
+
+    features = encoder(x)
+    decoder_outputs = decoder(features)
+
+    for i, output in enumerate(decoder_outputs, start=1):
+        print(f"Decoder output {i}: {output.shape}")
+
+
+    #6-class output
+    segmentation_head = SegmentationHead(
+        in_channels=16,
+        num_classes=6
+    )
+
+    final_features = decoder_outputs[0]
+    logits = segmentation_head(final_features)
+
+    print("Segmentation output:", logits.shape)
+
+
+
 
 
 
