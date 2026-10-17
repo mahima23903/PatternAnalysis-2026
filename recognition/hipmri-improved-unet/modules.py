@@ -87,6 +87,30 @@ class LocalizationModule(nn.Module):
         x = self.conv2(x)
         return x
 
+#Upsampling
+
+class Upsample(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+
+        self.upsample = nn.Upsample(
+            scale_factor=2,
+            mode="nearest"
+        )
+
+        self.conv = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            padding=1
+        )
+
+    def forward(self, x):
+        x = self.upsample(x)
+        x = self.conv(x)
+        return x
+
+
 #level 1 testing- testing the ContextModule
 if __name__ == "__main__":
     model = ContextModule(channels=32)
@@ -114,6 +138,28 @@ if __name__ == "__main__":
 
     print("Localization input:", x.shape)
     print("Localization output:", output.shape)
+
+
+    upsample = Upsample(128, 64)
+
+    x = torch.randn(1, 128, 64, 36)
+    output = upsample(x)
+
+    print("Upsampling input:", x.shape)
+    print("Upsampling output:", output.shape)
+
+    #Adding skip connections: transfer feature maps from encoder to decoder
+    encoder_features = torch.randn(1, 64, 128, 72)
+    decoder_features = torch.randn(1, 64, 128, 72)
+
+    combined = torch.cat(
+        [encoder_features, decoder_features],
+        dim=1
+    )
+
+    print("Skip connection output:", combined.shape)
+
+
 
 
 
