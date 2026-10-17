@@ -114,8 +114,47 @@ class Upsample(nn.Module):
         x = self.conv(x)
         return x
 
+#Constructing the encoder
 
-#level 1 testing- testing the ContextModule
+class Encoder(nn.Module):
+    #Layers of the encoder
+    def __init__(self, in_channels=1):
+        super().__init__()
+
+        self.initial_conv = nn.Conv2d(
+            in_channels, 16, kernel_size=3, padding=1
+        )
+
+        self.context1 = ContextModule(16)
+
+        self.down1 = Downsample(16, 32)
+        self.context2 = ContextModule(32)
+
+        self.down2 = Downsample(32, 64)
+        self.context3 = ContextModule(64)
+
+        self.down3 = Downsample(64, 128)
+        self.context4 = ContextModule(128)
+
+        self.down4 = Downsample(128, 256)
+        self.context5 = ContextModule(256)
+
+    #Forward pass - image passing through the layers
+    def forward(self, x):
+        x1 = self.context1(self.initial_conv(x))
+
+        x2 = self.context2(self.down1(x1))
+
+        x3 = self.context3(self.down2(x2))
+
+        x4 = self.context4(self.down3(x3))
+
+        x5 = self.context5(self.down4(x4))
+
+        return x1, x2, x3, x4, x5
+
+
+#Code sanity check
 if __name__ == "__main__":
     model = ContextModule(channels=32)
 
@@ -162,6 +201,17 @@ if __name__ == "__main__":
     )
 
     print("Skip connection output:", combined.shape)
+
+
+    encoder = Encoder(in_channels=1)
+    #tensor with random numbers
+    x = torch.randn(1, 1, 256, 144)
+    features = encoder(x)
+
+    for i, feature in enumerate(features, start=1):
+        print(f"Encoder level {i}:", feature.shape)
+
+
 
 
 
