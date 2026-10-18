@@ -18,9 +18,9 @@ class ContextModule(nn.Module):
         )
         self.norm1 = nn.InstanceNorm2d(channels)
         self.act1 = nn.LeakyReLU(negative_slope=0.01, inplace=True)
-
-        self.dropout = nn.Dropout2d(p=dropout_p)
-
+        #Using normal dropout - randomly zeros feature units rather than entire feature layers
+        self.dropout = nn.Dropout(p=dropout_p) # Changed the dropout layer during verification
+        
         self.conv2 = nn.Conv2d(
             channels, channels, kernel_size=3, padding=1
         )
