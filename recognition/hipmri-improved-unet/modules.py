@@ -212,6 +212,53 @@ class SegmentationHead(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
+#Adding the Deep supervision layer- predictions at multiple resoultons are generated
+# Upsamples the lower-resolution predictions and adds their logits to form the final six-class prediction.
+
+class DeepSupervision(nn.Module):
+    def __init__(self, num_classes=6):
+        super().__init__()
+
+        self.head_d3 = SegmentationHead(64, num_classes)
+        self.head_d2 = SegmentationHead(32, num_classes)
+        self.head_d1 = SegmentationHead(16, num_classes)
+
+        self.upsample = nn.Upsample(
+            scale_factor=2,
+            mode="nearest"
+        )
+
+    def forward(self, d1, d2, d3):
+        pred_d3 = self.head_d3(d3)
+        pred_d2 = self.head_d2(d2)
+        pred_d1 = self.head_d1(d1)
+
+        combined_d2 = self.upsample(pred_d3) + pred_d2
+        combined_d1 = self.upsample(combined_d2) + pred_d1
+
+        return combined_d1
+
+
+#Assembling all the layers to a complete U-net architecture
+
+class ImprovedUNet(nn.Module):
+    def __init__(self, in_channels=1, num_classes=6):
+        super().__init__()
+
+        self.encoder = Encoder(in_channels=in_channels)
+        self.decoder = Decoder()
+        self.deep_supervision = DeepSupervision(
+            num_classes=num_classes
+        )
+
+    def forward(self, x):
+        encoder_features = self.encoder(x)
+
+        d1, d2, d3, d4 = self.decoder(encoder_features)
+
+        logits = self.deep_supervision(d1, d2, d3)
+
+        return logits
 
 
 #Code sanity check
@@ -307,6 +354,37 @@ if __name__ == "__main__":
     logits = segmentation_head(final_features)
 
     print("Segmentation output:", logits.shape)
+
+
+    deep_supervision = DeepSupervision(num_classes=6)
+
+    d1, d2, d3, d4 = decoder_outputs
+
+    final_logits = deep_supervision(d1, d2, d3)
+
+    print("Deep supervision output:", final_logits.shape)
+
+    assert final_logits.shape == (1, 6, 256, 144)
+    print("Deep supervision shape test passed!")
+
+    #Testing the whole model after assembling all the layers including deep supervision and localisation
+    model = ImprovedUNet(in_channels=1, num_classes=6)
+
+    x = torch.randn(1, 1, 256, 144)
+    logits = model(x)
+
+    print("Full model output:", logits.shape)
+
+    assert logits.shape == (1, 6, 256, 144)
+
+    predicted_mask = torch.argmax(logits, dim=1)
+    print("Predicted mask:", predicted_mask.shape)
+
+    assert predicted_mask.shape == (1, 256, 144)
+
+    print("Full model shape tests passed!")
+
+
 
 
 
