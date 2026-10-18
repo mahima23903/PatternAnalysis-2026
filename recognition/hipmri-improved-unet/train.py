@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from dataset import HipMRIDataset
-from modules import UNet
+from modules import ImprovedUNet
 
 
 def train_one_epoch(model, loader, criterion, optimizer, device):
@@ -16,6 +16,8 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
     for images, masks in loader:
         images = images.to(device)
         masks = masks.to(device)
+        if masks.min().item() < 0 or masks.max().item() >= 6:
+            raise ValueError("Invalid segmentation labels detected")
 
         optimizer.zero_grad()
         outputs = model(images)
@@ -29,7 +31,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
     return total_loss / len(loader.dataset)
 
 
-def validate(model, loader, criterion, device, num_classes=4):
+def validate(model, loader, criterion, device, num_classes=6):
     model.eval()
     total_loss = 0.0
 
@@ -48,7 +50,7 @@ def validate(model, loader, criterion, device, num_classes=4):
 
             total_loss += loss.item() * images.size(0)
 
-            for class_id in range(1, num_classes):
+            for class_id in range(num_classes):
                 pred = predictions == class_id
                 target = masks == class_id
 
@@ -56,8 +58,8 @@ def validate(model, loader, criterion, device, num_classes=4):
                 predictions_count[class_id] += pred.sum().item()
                 targets_count[class_id] += target.sum().item()
 
-    dice_scores = []
-    iou_scores = []
+    dice_scores = {} # changing into dictionary to store seperate scores
+    iou_scores = {}
 
     for class_id in range(1, num_classes):
         intersection = intersections[class_id].item()
@@ -68,13 +70,25 @@ def validate(model, loader, criterion, device, num_classes=4):
         union = denominator - intersection
 
         if denominator > 0:
-            dice_scores.append(2 * intersection / denominator)
-            iou_scores.append(intersection / union)
+            dice_scores[class_id] = 2 * intersection / denominator
+            iou_scores[class_id] = intersection / union
+        else:
+            dice_scores[class_id] = None
+            iou_scores[class_id] = None
 
-    mean_dice = sum(dice_scores) / len(dice_scores) if dice_scores else 0.0
-    mean_iou = sum(iou_scores) / len(iou_scores) if iou_scores else 0.0
+    foreground_dice = [
+    dice_scores[c] for c in range(1, num_classes)
+    if dice_scores[c] is not None
+    ]
 
-    return total_loss / len(loader.dataset), mean_dice, mean_iou
+    foreground_iou = [
+    iou_scores[c] for c in range(1, num_classes)
+    if iou_scores[c] is not None
+    ]
+
+    mean_dice = sum(foreground_dice) / len(foreground_dice) if foreground_dice else 0.0
+    mean_iou = sum(foreground_iou) / len(foreground_iou) if foreground_iou else 0.0
+    return total_loss / len(loader.dataset), mean_dice, mean_iou, dice_scores, iou_scores
 
 
 def main():
@@ -120,7 +134,7 @@ def main():
     print("Training samples:", len(train_dataset), flush=True)
     print("Validation samples:", len(val_dataset), flush=True)
 
-    model = UNet(in_channels=1, num_classes=4).to(device)
+    model = ImprovedUNet(in_channels=1, num_classes=6).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -134,9 +148,9 @@ def main():
             model, train_loader, criterion, optimizer, device
         )
 
-        val_loss, val_dice, val_iou = validate(
+        val_loss, val_dice, val_iou, class_dice, class_iou = validate(
             model, val_loader, criterion, device
-        )
+            )
 
         print(
             f"Epoch [{epoch + 1}/{args.epochs}] "
@@ -146,6 +160,13 @@ def main():
             f"IoU: {val_iou:.4f}",
             flush=True
         )
+
+        # Print individual class Dice scores
+        for class_id, score in class_dice.items():
+            if score is not None:
+                print(f"Class {class_id} Dice: {score:.4f}", flush=True)
+            else:
+                print(f"Class {class_id} Dice: N/A", flush=True)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -157,7 +178,7 @@ def main():
                 "val_loss": val_loss,
                 "val_dice": val_dice,
                 "val_iou": val_iou
-            }, output_dir / "best_unet.pth")
+            }, output_dir / "best_improved_unet.pth")
 
             print("Best model checkpoint saved!", flush=True)
 
