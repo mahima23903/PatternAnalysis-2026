@@ -9,6 +9,8 @@ from dataset import HipMRIDataset
 from modules import ImprovedUNet
 from train import validate
 
+import numpy as np
+
 def load_model(checkpoint_path, device):
     # Initialise the same architecture used during training
     model = ImprovedUNet(in_channels=1, num_classes=6)
@@ -73,6 +75,52 @@ def evaluate_model(model, loader, device):
             print(f"Class {class_id}: No valid pixels for evaluation")
 
 
+#Calculate dice scores for an individual MRI slice
+def calculate_slice_dice(prediction, target, class_id):
+    pred_mask = prediction == class_id
+    true_mask = target == class_id
+
+    intersection = (pred_mask & true_mask).sum().item()
+    denominator = pred_mask.sum().item() + true_mask.sum().item()
+
+    if denominator == 0:
+        return None
+
+    return 2 * intersection / denominator
+
+def find_failure_cases(model, loader, device, class_id=5):
+    model.eval()
+    results = []
+
+    with torch.no_grad():
+        for batch_idx, (images, masks) in enumerate(loader):
+            images = images.to(device)
+
+            outputs = model(images)
+            predictions = outputs.argmax(dim=1).cpu()
+
+            for i in range(len(predictions)):
+                score = calculate_slice_dice(
+                    predictions[i],
+                    masks[i],
+                    class_id
+                )
+
+                if score is not None:
+                    index = batch_idx * loader.batch_size + i
+                    filename = loader.dataset.image_files[index].name
+
+                    results.append((filename, score))
+
+    results.sort(key=lambda item: item[1])
+
+    print(f"\nLowest Dice scores for Class {class_id}:")
+
+    for filename, score in results[:5]:
+        print(f"{filename}: Dice = {score:.4f}")
+
+    return results
+
 def main():
     parser = argparse.ArgumentParser(
         description="Evaluate the Improved U-Net model"
@@ -111,6 +159,13 @@ def main():
     )
 
     evaluate_model(model, loader, device)
+    if args.split == "test":
+        find_failure_cases(
+            model,
+            loader,
+            device,
+            class_id=5
+        )
 
 
 if __name__ == "__main__":
