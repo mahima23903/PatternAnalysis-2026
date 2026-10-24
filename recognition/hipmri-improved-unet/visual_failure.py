@@ -68,3 +68,50 @@ def load_trained_model(checkpoint_path, device):
 
     return model
 
+def predict_segmentation(model, image, device):
+    # Add a batch dimension: [1, 256, 144]
+    # becomes [1, 1, 256, 144]
+    input_tensor = image.unsqueeze(0).to(device)
+
+    # Disable gradient calculations during inference
+    with torch.no_grad():
+        output = model(input_tensor)
+
+        # Select the class with the highest score for each pixel
+        prediction = output.argmax(dim=1)
+
+    # Remove batch dimension and return to CPU
+    return prediction.squeeze(0).cpu()
+
+def main():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    dataset_root = Path(
+        "/home/groups/comp3710/HipMRI_Study_open/keras_slices_data"
+    )
+
+    dataset = HipMRIDataset(
+        image_dir=dataset_root / "keras_slices_test",
+        mask_dir=dataset_root / "keras_slices_seg_test"
+    )
+
+    checkpoint_path = "checkpoints_improved_20/best_improved_unet.pth"
+
+    model = load_trained_model(checkpoint_path, device)
+
+    filename = "case_040_week_0_slice_38.nii.gz"
+
+    image, ground_truth = load_mri_slice(dataset, filename)
+
+    prediction = predict_segmentation(model, image, device)
+
+    visualize_segmentation(
+        image,
+        ground_truth,
+        prediction,
+        filename
+    )
+
+
+if __name__ == "__main__":
+    main()
