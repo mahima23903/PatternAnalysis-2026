@@ -119,6 +119,9 @@ def train_model(args):
     # Track the best validation loss
     best_val_loss = float("inf")
 
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Train the model for the specified number of epochs
     for epoch in range(args.epochs):
         model.train()
@@ -144,3 +147,43 @@ def train_model(args):
             optimizer.step()
 
             total_train_loss += loss.item() * images.size(0)
+        # Calculate average training loss for this epoch
+        avg_train_loss = total_train_loss / len(train_loader.dataset)
+
+        # Evaluate the model on the validation dataset
+        val_loss, val_dice, val_iou, dice_scores, iou_scores = validate(
+            model,
+            val_loader,
+            criterion,
+            device,
+            num_classes=6
+        )
+
+        # Display training and validation results
+        print(
+            f"Epoch [{epoch + 1}/{args.epochs}] "
+            f"Train Loss: {avg_train_loss:.4f} "
+            f"Val Loss: {val_loss:.4f} "
+            f"Val Dice: {val_dice:.4f} "
+            f"Val IoU: {val_iou:.4f}"
+        )
+
+        # Save the model with the lowest validation loss
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+
+            checkpoint = {
+                "epoch": epoch + 1,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "val_loss": val_loss,
+                "val_dice": val_dice,
+                "val_iou": val_iou
+            }
+
+            torch.save(
+                checkpoint,
+                output_dir / "best_unet.pth"
+            )
+
+            print("Best baseline U-Net checkpoint saved")
