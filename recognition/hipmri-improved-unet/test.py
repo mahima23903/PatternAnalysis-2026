@@ -46,3 +46,43 @@ def load_data(data_root, split="validate", batch_size=16):
     )
 
     return loader
+
+# Evaluate the saved model using either validation or test data
+def evaluate_model(model, loader, device):
+    criterion = nn.CrossEntropyLoss()
+
+    loss, mean_dice, mean_iou, dice_scores, iou_scores = validate(
+        model,
+        loader,
+        criterion,
+        device,
+        num_classes=6
+    )
+
+    print(f"Loss: {loss:.4f}")
+    print(f"Mean Foreground Dice: {mean_dice:.4f}")
+    print(f"Mean Foreground IoU: {mean_iou:.4f}")
+
+    for class_id in range(1, 6):
+        dice = dice_scores[class_id]
+        iou = iou_scores[class_id]
+
+        if dice is not None and iou is not None:
+            print(f"Class {class_id}: Dice = {dice:.4f}, IoU = {iou:.4f}")
+        else:
+            print(f"Class {class_id}: No valid pixels for evaluation")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Evaluate the Improved U-Net model"
+    )
+
+    parser.add_argument(
+        "--split",
+        type=str,
+        choices=["validate", "test"],
+        default="validate"
+    )
+
+    args = parser.parse_args()
