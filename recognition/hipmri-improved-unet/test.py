@@ -85,4 +85,33 @@ def main():
         default="validate"
     )
 
+    parser.add_argument(
+        "--data-root",
+        type=str,
+        default="/home/groups/comp3710/HipMRI_Study_open/keras_slices_data"
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="checkpoints_improved_20/best_improved_unet.pth"
+    )
+
     args = parser.parse_args()
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    print(f"Using device: {device}")
+    print(f"Evaluating split: {args.split}")
+
+    model = load_model(args.checkpoint, device)
+
+    loader = load_data(
+        args.data_root,
+        split=args.split
+    )
+
+    evaluate_model(model, loader, device)
+
+
+if __name__ == "__main__":
+    main()
