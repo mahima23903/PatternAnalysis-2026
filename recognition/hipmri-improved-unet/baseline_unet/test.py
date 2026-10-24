@@ -76,3 +76,53 @@ def evaluate_model(model, loader, device):
             )
         else:
             print(f"Class {class_id}: No valid pixels for evaluation")
+
+#Using similar main function as our improved U-Net model
+def main():
+    parser = argparse.ArgumentParser(
+        description="Evaluate baseline 2D U-Net on HipMRI"
+    )
+
+    parser.add_argument(
+        "--split",
+        type=str,
+        choices=["validate", "test"],
+        default="validate"
+    )
+
+    parser.add_argument(
+        "--data-root",
+        type=str,
+        default="/home/groups/comp3710/HipMRI_Study_open/keras_slices_data"
+    )
+
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="checkpoints_unet_20/best_unet.pth"
+    )
+
+    args = parser.parse_args()
+
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
+
+    print(f"Using device: {device}")
+    print(f"Evaluating split: {args.split}")
+
+    # Load the trained baseline U-Net
+    model = load_model(args.checkpoint, device)
+
+    # Load the selected dataset
+    loader = load_data(
+        args.data_root,
+        split=args.split
+    )
+
+    # Evaluate segmentation performance
+    evaluate_model(model, loader, device)
+
+
+if __name__ == "__main__":
+    main()
