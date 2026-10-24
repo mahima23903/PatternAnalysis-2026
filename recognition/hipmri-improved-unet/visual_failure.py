@@ -42,3 +42,29 @@ def visualize_segmentation(image, ground_truth, prediction, filename):
 
     print(f"Saved visualization: {output_path}")
 
+
+#Loading specific MRI slice and generating predictions
+def load_mri_slice(dataset, filename):
+    for index, image_path in enumerate(dataset.image_files):
+        if image_path.name == filename:
+            image, mask = dataset[index]
+            return image, mask
+
+    raise FileNotFoundError(f"MRI slice not found: {filename}")
+
+def load_trained_model(checkpoint_path, device):
+    model = ImprovedUNet(in_channels=1, num_classes=6)
+
+    checkpoint = torch.load(
+        checkpoint_path,
+        map_location=device,
+        weights_only=True
+    )
+
+    model.load_state_dict(checkpoint["model_state_dict"])
+
+    model = model.to(device)
+    model.eval()
+
+    return model
+
