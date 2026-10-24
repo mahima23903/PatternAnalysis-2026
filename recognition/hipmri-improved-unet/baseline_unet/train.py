@@ -187,3 +187,46 @@ def train_model(args):
             )
 
             print("Best baseline U-Net checkpoint saved")
+
+#Adding the main function
+def main():
+    parser = argparse.ArgumentParser(
+        description="Train baseline 2D U-Net on HipMRI"
+    )
+
+    parser.add_argument(
+        "--data-root",
+        type=str,
+        default="/home/groups/comp3710/HipMRI_Study_open/keras_slices_data"
+    )
+
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=20
+    )
+
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=4
+    )
+
+    parser.add_argument(
+        "--learning-rate",
+        type=float,
+        default=0.001
+    )
+
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="checkpoints_baseline"
+    )
+
+    args = parser.parse_args()
+    train_model(args)
+
+
+if __name__ == "__main__":
+    main()
