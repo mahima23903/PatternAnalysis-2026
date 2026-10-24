@@ -109,15 +109,22 @@ def find_failure_cases(model, loader, device, class_id=5):
                 if score is not None:
                     index = batch_idx * loader.batch_size + i
                     filename = loader.dataset.image_files[index].name
-
-                    results.append((filename, score))
+                    # Count Class 5 pixels in prediction and ground truth
+                    pred_pixels = (predictions[i] == class_id).sum().item()
+                    true_pixels = (masks[i] == class_id).sum().item()
+                    
+                    results.append((filename, score, pred_pixels, true_pixels))
 
     results.sort(key=lambda item: item[1])
 
     print(f"\nLowest Dice scores for Class {class_id}:")
 
-    for filename, score in results[:5]:
-        print(f"{filename}: Dice = {score:.4f}")
+    for filename, score, pred_pixels, true_pixels in results[:5]:
+        print(
+            f"{filename}: Dice = {score:.4f}, "
+            f"Predicted pixels = {pred_pixels}, "
+            f"Ground-truth pixels = {true_pixels}"
+        )
 
     return results
 
