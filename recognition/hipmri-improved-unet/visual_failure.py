@@ -99,19 +99,23 @@ def main():
 
     model = load_trained_model(checkpoint_path, device)
 
-    filename = "case_040_week_0_slice_38.nii.gz"
+    filenames = [
+    "case_040_week_0_slice_38.nii.gz",
+    "case_040_week_1_slice_20.nii.gz",
+    "case_040_week_2_slice_51.nii.gz"
+]
 
-    image, ground_truth = load_mri_slice(dataset, filename)
+    for filename in filenames:
+        image, ground_truth = load_mri_slice(dataset, filename)
 
-    prediction = predict_segmentation(model, image, device)
+        prediction = predict_segmentation(model, image, device)
 
-    visualize_segmentation(
-        image,
-        ground_truth,
-        prediction,
-        filename
-    )
-
+        visualize_segmentation(
+            image,
+            ground_truth,
+            prediction,
+            filename
+         )
 
 if __name__ == "__main__":
     main()
