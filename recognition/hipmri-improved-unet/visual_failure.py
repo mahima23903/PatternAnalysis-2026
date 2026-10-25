@@ -90,6 +90,32 @@ def predict_segmentation(model, image, device):
     # Remove batch dimension and return to CPU
     return prediction.squeeze(0).cpu()
 
+def calculate_class_dice(prediction, ground_truth, num_classes=6):
+    results = {}
+
+    for class_id in range(1, num_classes):
+        pred_mask = prediction == class_id
+        true_mask = ground_truth == class_id
+
+        intersection = (pred_mask & true_mask).sum().item()
+        pred_pixels = pred_mask.sum().item()
+        true_pixels = true_mask.sum().item()
+
+        denominator = pred_pixels + true_pixels
+
+        if denominator == 0:
+            dice = None  # Class absent in both masks
+        else:
+            dice = 2 * intersection / denominator
+
+        results[class_id] = {
+            "dice": dice,
+            "pred_pixels": pred_pixels,
+            "true_pixels": true_pixels
+        }
+
+    return results
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -131,6 +157,32 @@ def main():
         improved_prediction = predict_segmentation(
             improved_model, image, device
         )
+
+        baseline_scores = calculate_class_dice(
+            baseline_prediction, ground_truth
+        )
+
+        improved_scores = calculate_class_dice(
+            improved_prediction, ground_truth
+        )
+
+        print(f"\nSlice: {filename}")
+        print("Class | Baseline Dice | Improved Dice | GT Pixels")
+
+        for class_id in range(1, 6):
+            baseline = baseline_scores[class_id]["dice"]
+            improved = improved_scores[class_id]["dice"]
+            gt_pixels = baseline_scores[class_id]["true_pixels"]
+
+            baseline_text = "N/A" if baseline is None else f"{baseline:.4f}"
+            improved_text = "N/A" if improved is None else f"{improved:.4f}"
+
+            print(
+                f"{class_id:5d} | "
+                f"{baseline_text:13} | "
+                f"{improved_text:13} | "
+                f"{gt_pixels}"
+            )
 
         visualize_segmentation(
             image,
