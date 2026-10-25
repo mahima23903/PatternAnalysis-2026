@@ -4,18 +4,21 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 
+#We are going to compare in case of base model- 2D U-Net
 from dataset import HipMRIDataset
 from modules import ImprovedUNet
+from baseline_unet.modules import UNet
 
 
-def visualize_segmentation(image, ground_truth, prediction, filename):
-    # Convert tensors to NumPy arrays
+def visualize_segmentation(image, ground_truth, baseline_prediction,
+                           improved_prediction, filename):
+
     image = image.squeeze().cpu().numpy()
     ground_truth = ground_truth.cpu().numpy()
-    prediction = prediction.cpu().numpy()
+    baseline_prediction = baseline_prediction.cpu().numpy()
+    improved_prediction = improved_prediction.cpu().numpy()
 
-    # Create three side-by-side plots
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig, axes = plt.subplots(1, 4, figsize=(20, 5))
 
     axes[0].imshow(image, cmap="gray")
     axes[0].set_title("Original MRI")
@@ -23,8 +26,11 @@ def visualize_segmentation(image, ground_truth, prediction, filename):
     axes[1].imshow(ground_truth, cmap="tab10", vmin=0, vmax=5)
     axes[1].set_title("Ground Truth")
 
-    axes[2].imshow(prediction, cmap="tab10", vmin=0, vmax=5)
-    axes[2].set_title("Improved U-Net Prediction")
+    axes[2].imshow(baseline_prediction, cmap="tab10", vmin=0, vmax=5)
+    axes[2].set_title("Baseline U-Net")
+
+    axes[3].imshow(improved_prediction, cmap="tab10", vmin=0, vmax=5)
+    axes[3].set_title("Improved U-Net")
 
     for ax in axes:
         ax.axis("off")
@@ -35,12 +41,12 @@ def visualize_segmentation(image, ground_truth, prediction, filename):
     output_dir = Path("failure_visualizations")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    output_path = output_dir / f"{Path(filename).name}.png"
+    output_path = output_dir / f"comparison_{Path(filename).name}.png"
 
     plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-    print(f"Saved visualization: {output_path}")
+    print(f"Saved comparison: {output_path}")
 
 
 #Loading specific MRI slice and generating predictions
@@ -52,8 +58,9 @@ def load_mri_slice(dataset, filename):
 
     raise FileNotFoundError(f"MRI slice not found: {filename}")
 
-def load_trained_model(checkpoint_path, device):
-    model = ImprovedUNet(in_channels=1, num_classes=6)
+#for base model and improved model
+def load_trained_model(model_class, checkpoint_path, device):
+    model = model_class(in_channels=1, num_classes=6)
 
     checkpoint = torch.load(
         checkpoint_path,
@@ -95,27 +102,44 @@ def main():
         mask_dir=dataset_root / "keras_slices_seg_test"
     )
 
-    checkpoint_path = "checkpoints_improved_20/best_improved_unet.pth"
+    # Load both trained models
+    baseline_model = load_trained_model(
+        UNet,
+        "checkpoints_unet_20/best_unet.pth",
+        device
+    )
 
-    model = load_trained_model(checkpoint_path, device)
+    improved_model = load_trained_model(
+        ImprovedUNet,
+        "checkpoints_improved_20/best_improved_unet.pth",
+        device
+    )
 
     filenames = [
-    "case_040_week_0_slice_38.nii.gz",
-    "case_040_week_1_slice_20.nii.gz",
-    "case_040_week_2_slice_51.nii.gz"
-]
+        "case_040_week_0_slice_38.nii.gz",
+        "case_040_week_1_slice_20.nii.gz",
+        "case_040_week_2_slice_51.nii.gz"
+    ]
 
     for filename in filenames:
         image, ground_truth = load_mri_slice(dataset, filename)
 
-        prediction = predict_segmentation(model, image, device)
+        baseline_prediction = predict_segmentation(
+            baseline_model, image, device
+        )
+
+        improved_prediction = predict_segmentation(
+            improved_model, image, device
+        )
 
         visualize_segmentation(
             image,
             ground_truth,
-            prediction,
+            baseline_prediction,
+            improved_prediction,
             filename
-         )
+        )
+
 
 if __name__ == "__main__":
     main()
