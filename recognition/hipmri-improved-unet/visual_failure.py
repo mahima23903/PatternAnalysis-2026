@@ -116,6 +116,48 @@ def calculate_class_dice(prediction, ground_truth, num_classes=6):
 
     return results
 
+#Finding cases where improved Unet works better in case of finding class 5
+def find_improvement_cases(dataset, baseline_model, improved_model, device):
+    improvements = []
+
+    for index in range(len(dataset)):
+        image, ground_truth = dataset[index]
+
+        # Only examine slices containing Class 5
+        if not (ground_truth == 5).any().item():
+            continue
+
+        baseline_prediction = predict_segmentation(
+            baseline_model, image, device
+        )
+
+        improved_prediction = predict_segmentation(
+            improved_model, image, device
+        )
+
+        baseline_dice = calculate_class_dice(
+            baseline_prediction, ground_truth
+        )[5]["dice"]
+
+        improved_dice = calculate_class_dice(
+            improved_prediction, ground_truth
+        )[5]["dice"]
+
+        improvement = improved_dice - baseline_dice
+
+        if improvement > 0:
+            improvements.append((
+                improvement,
+                dataset.image_files[index].name,
+                baseline_dice,
+                improved_dice
+            ))
+
+    # Rank cases by Class 5 Dice improvement
+    improvements.sort(reverse=True)
+
+    return improvements[:2]
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -183,6 +225,40 @@ def main():
                 f"{improved_text:13} | "
                 f"{gt_pixels}"
             )
+
+        visualize_segmentation(
+            image,
+            ground_truth,
+            baseline_prediction,
+            improved_prediction,
+            filename
+        )
+
+        # Find two cases where Improved U-Net performs better
+    improvement_cases = find_improvement_cases(
+        dataset,
+        baseline_model,
+        improved_model,
+        device
+    )
+
+    print("\nTop Class 5 improvement cases:")
+
+    for improvement, filename, baseline_dice, improved_dice in improvement_cases:
+        print(f"\nSlice: {filename}")
+        print(f"Baseline Class 5 Dice: {baseline_dice:.4f}")
+        print(f"Improved Class 5 Dice: {improved_dice:.4f}")
+        print(f"Dice improvement: {improvement:.4f}")
+
+        image, ground_truth = load_mri_slice(dataset, filename)
+
+        baseline_prediction = predict_segmentation(
+            baseline_model, image, device
+        )
+
+        improved_prediction = predict_segmentation(
+            improved_model, image, device
+        )
 
         visualize_segmentation(
             image,
