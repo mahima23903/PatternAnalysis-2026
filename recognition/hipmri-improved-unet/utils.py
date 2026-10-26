@@ -298,3 +298,60 @@ def measure_gpu_memory(model, input_tensor, device):
     )
 
     return peak_memory_mb
+
+def measure_inference_time(model, input_tensor, device, warmup=10, runs=100):
+    """
+    Measure average GPU inference time using CUDA events.
+
+    Args:
+        model: Trained segmentation model.
+        input_tensor: MRI tensor [B, 1, H, W].
+        device: CUDA device.
+        warmup: Number of warm-up iterations.
+        runs: Number of timed iterations.
+
+    Returns:
+        Average inference time in milliseconds per slice.
+    """
+
+    if device.type != "cuda":
+        raise ValueError("Inference benchmarking requires CUDA.")
+
+    if warmup < 0 or runs <= 0:
+        raise ValueError("warmup must be non-negative and runs must be positive.")
+
+    model.eval()
+    model = model.to(device)
+    input_tensor = input_tensor.to(device)
+
+    batch_size = input_tensor.shape[0]
+
+    # Warm up the GPU before measuring execution time.
+    with torch.inference_mode():
+        for _ in range(warmup):
+            _ = model(input_tensor)
+
+    torch.cuda.synchronize(device)
+
+    timings = []
+
+    # Measure repeated inference using CUDA events.
+    with torch.inference_mode():
+        for _ in range(runs):
+            start = torch.cuda.Event(enable_timing=True)
+            end = torch.cuda.Event(enable_timing=True)
+
+            start.record()
+            _ = model(input_tensor)
+            end.record()
+
+            end.synchronize()
+
+            timings.append(start.elapsed_time(end))
+
+    average_batch_time = sum(timings) / len(timings)
+
+    # Convert batch inference time to average time per slice.
+    average_slice_time = average_batch_time / batch_size
+
+    return average_slice_time
