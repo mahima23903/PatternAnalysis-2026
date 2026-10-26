@@ -46,3 +46,44 @@ def verify_patient_split(train_dir, val_dir, test_dir):
         print(f"{split} overlap: {len(patients)}")
 
     return overlaps
+
+
+def verify_image_mask_pairs(image_dir, mask_dir):
+    """
+    Verify that every MRI image has a corresponding segmentation mask
+    and that no unmatched masks exist.
+
+    Expected naming:
+        Image: case_040_week_0_slice_38.nii.gz
+        Mask:  seg_040_week_0_slice_38.nii.gz
+    """
+
+    image_dir = Path(image_dir)
+    mask_dir = Path(mask_dir)
+
+    image_files = list(image_dir.glob("case_*.nii.gz"))
+    mask_files = list(mask_dir.glob("seg_*.nii.gz"))
+
+    image_keys = {
+        path.name.replace("case_", "", 1)
+        for path in image_files
+    }
+
+    mask_keys = {
+        path.name.replace("seg_", "", 1)
+        for path in mask_files
+    }
+
+    missing_masks = image_keys - mask_keys
+    missing_images = mask_keys - image_keys
+
+    print("\nImage-mask pairing verification")
+    print(f"MRI images: {len(image_files)}")
+    print(f"Segmentation masks: {len(mask_files)}")
+    print(f"Missing masks: {len(missing_masks)}")
+    print(f"Missing images: {len(missing_images)}")
+
+    return {
+        "missing_masks": missing_masks,
+        "missing_images": missing_images,
+    }
