@@ -3,7 +3,7 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 
-
+#Part 1 - Data Pipeline Verification
 # Verify patient-level separation to prevent data leakage
 # between training, validation, and test datasets.
 def extract_patient_id(filename):
@@ -145,4 +145,38 @@ def verify_spatial_alignment(image_dir, mask_dir):
         "shape_mismatches": shape_mismatches,
         "affine_mismatches": affine_mismatches,
         "orientation_mismatches": orientation_mismatches,
+    }
+
+def verify_mask_labels(mask_dir, num_classes=6):
+    """
+    Verify that segmentation masks contain valid integer class labels.
+
+    Expected labels: 0, 1, 2, 3, 4, 5.
+    """
+
+    mask_dir = Path(mask_dir)
+    mask_files = sorted(mask_dir.glob("seg_*.nii.gz"))
+
+    valid_labels = set(range(num_classes))
+    observed_labels = set()
+    invalid_masks = []
+
+    for mask_path in mask_files:
+        mask = nib.load(str(mask_path)).get_fdata()
+
+        unique_labels = np.unique(mask)
+        observed_labels.update(unique_labels.tolist())
+
+        # Detect unexpected or non-integer segmentation labels.
+        if not set(unique_labels).issubset(valid_labels):
+            invalid_masks.append(mask_path.name)
+
+    print("\nMask label verification")
+    print(f"Masks checked: {len(mask_files)}")
+    print(f"Observed labels: {sorted(observed_labels)}")
+    print(f"Masks with invalid labels: {len(invalid_masks)}")
+
+    return {
+        "observed_labels": sorted(observed_labels),
+        "invalid_masks": invalid_masks,
     }
