@@ -241,3 +241,19 @@ def calculate_boundary_precision(
     total_predicted_pixels = np.sum(pred_boundary)
 
     return float(correct_pixels / total_predicted_pixels)
+
+
+#Part-3 Computational efficiency benchmarking
+#Counting trained parameters
+def count_trainable_parameters(model):
+    """
+    Count the number of trainable parameters in a model.
+
+    This helps compare the complexity of Baseline U-Net
+    and Improved U-Net.
+    """
+    return sum(
+        parameter.numel()
+        for parameter in model.parameters()
+        if parameter.requires_grad
+    )
