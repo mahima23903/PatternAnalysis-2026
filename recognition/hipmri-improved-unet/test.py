@@ -11,6 +11,10 @@ from train import validate
 
 import numpy as np
 
+
+#Integrating boundary precision function
+from utils import calculate_boundary_precision
+
 def load_model(checkpoint_path, device):
     # Initialise the same architecture used during training
     model = ImprovedUNet(in_channels=1, num_classes=6)
@@ -128,6 +132,75 @@ def find_failure_cases(model, loader, device, class_id=5):
 
     return results
 
+
+def evaluate_boundary_precision(model, loader, device, num_classes=6):
+    """
+    Evaluate per-class boundary precision across the dataset.
+
+    Uses a 2-pixel tolerance to determine whether predicted
+    boundaries are sufficiently close to ground-truth boundaries.
+
+    Undefined scores (no predicted boundary) are excluded
+    and counted separately.
+    """
+
+    model.eval()
+
+    boundary_scores = {class_id: [] for class_id in range(1, num_classes)}
+    undefined_counts = {class_id: 0 for class_id in range(1, num_classes)}
+
+    with torch.no_grad():
+        for images, masks in loader:
+            images = images.to(device)
+
+            outputs = model(images)
+            predictions = outputs.argmax(dim=1).cpu().numpy()
+            targets = masks.numpy()
+
+            for prediction, target in zip(predictions, targets):
+                for class_id in range(1, num_classes):
+
+                    precision = calculate_boundary_precision(
+                        prediction,
+                        target,
+                        class_id,
+                        tolerance=2
+                    )
+
+                    if precision is None:
+                        undefined_counts[class_id] += 1
+                    else:
+                        boundary_scores[class_id].append(precision)
+
+    print("\nBoundary Precision Evaluation (2-pixel tolerance)")
+
+    class_means = []
+
+    for class_id in range(1, num_classes):
+        scores = boundary_scores[class_id]
+
+        if scores:
+            mean_precision = float(np.mean(scores))
+            class_means.append(mean_precision)
+
+            print(
+                f"Class {class_id}: "
+                f"Boundary Precision = {mean_precision:.4f}, "
+                f"Valid slices = {len(scores)}, "
+                f"Undefined slices = {undefined_counts[class_id]}"
+            )
+        else:
+            print(
+                f"Class {class_id}: No valid boundary predictions, "
+                f"Undefined slices = {undefined_counts[class_id]}"
+            )
+
+    if class_means:
+        print(
+            f"Mean Foreground Boundary Precision: "
+            f"{np.mean(class_means):.4f}"
+        )
+
 def main():
     parser = argparse.ArgumentParser(
         description="Evaluate the Improved U-Net model"
@@ -166,6 +239,8 @@ def main():
     )
 
     evaluate_model(model, loader, device)
+    evaluate_boundary_precision(model, loader, device)
+
     if args.split == "test":
         find_failure_cases(
             model,
