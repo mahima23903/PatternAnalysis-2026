@@ -9,6 +9,10 @@ from dataset import HipMRIDataset
 from baseline_unet.modules import UNet
 from baseline_unet.train import validate
 
+#Integraing Boundary precision function
+import numpy as np
+from utils import calculate_boundary_precision
+
 def load_model(checkpoint_path, device):
     # Initialise the baseline U-Net architecture
     model = UNet(in_channels=1, num_classes=6)
@@ -77,6 +81,71 @@ def evaluate_model(model, loader, device):
         else:
             print(f"Class {class_id}: No valid pixels for evaluation")
 
+
+def evaluate_boundary_precision(model, loader, device, num_classes=6):
+    """
+    Evaluate class-wise boundary precision using a 2-pixel tolerance.
+
+    Undefined scores are excluded from the mean and counted separately.
+    """
+
+    model.eval()
+
+    boundary_scores = {class_id: [] for class_id in range(1, num_classes)}
+    undefined_counts = {class_id: 0 for class_id in range(1, num_classes)}
+
+    with torch.no_grad():
+        for images, masks in loader:
+            images = images.to(device)
+
+            outputs = model(images)
+            predictions = outputs.argmax(dim=1).cpu().numpy()
+            targets = masks.numpy()
+
+            for prediction, target in zip(predictions, targets):
+                for class_id in range(1, num_classes):
+
+                    precision = calculate_boundary_precision(
+                        prediction,
+                        target,
+                        class_id,
+                        tolerance=2
+                    )
+
+                    if precision is None:
+                        undefined_counts[class_id] += 1
+                    else:
+                        boundary_scores[class_id].append(precision)
+
+    print("\nBoundary Precision Evaluation (2-pixel tolerance)")
+
+    class_means = []
+
+    for class_id in range(1, num_classes):
+        scores = boundary_scores[class_id]
+
+        if scores:
+            mean_precision = float(np.mean(scores))
+            class_means.append(mean_precision)
+
+            print(
+                f"Class {class_id}: "
+                f"Boundary Precision = {mean_precision:.4f}, "
+                f"Valid slices = {len(scores)}, "
+                f"Undefined slices = {undefined_counts[class_id]}"
+            )
+        else:
+            print(
+                f"Class {class_id}: No valid boundary predictions, "
+                f"Undefined slices = {undefined_counts[class_id]}"
+            )
+
+    if class_means:
+        print(
+            f"Mean Foreground Boundary Precision: "
+            f"{np.mean(class_means):.4f}"
+        )
+
 #Using similar main function as our improved U-Net model
 def main():
     parser = argparse.ArgumentParser(
@@ -122,6 +191,7 @@ def main():
 
     # Evaluate segmentation performance
     evaluate_model(model, loader, device)
+    evaluate_boundary_precision(model, loader, device)
 
 
 if __name__ == "__main__":
