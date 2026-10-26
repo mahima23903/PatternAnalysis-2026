@@ -3,6 +3,8 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 
+from scipy.ndimage import binary_erosion, distance_transform_edt
+
 #Part 1 - Data Pipeline Verification
 # Verify patient-level separation to prevent data leakage
 # between training, validation, and test datasets.
@@ -180,3 +182,62 @@ def verify_mask_labels(mask_dir, num_classes=6):
         "observed_labels": sorted(observed_labels),
         "invalid_masks": invalid_masks,
     }
+
+
+#Part 2 - Boundary precision evaluation
+
+def calculate_boundary_precision(
+    prediction,
+    ground_truth,
+    class_id,
+    tolerance=2
+):
+    """
+    Calculate boundary precision for a segmentation class.
+
+    A predicted boundary pixel is considered correct if it lies
+    within the specified distance of the ground-truth boundary.
+
+    Args:
+        prediction: Predicted segmentation mask [H, W].
+        ground_truth: Ground-truth segmentation mask [H, W].
+        class_id: Segmentation class to evaluate.
+        tolerance: Maximum allowed boundary distance in pixels.
+
+    Returns:
+        Boundary precision between 0 and 1.
+        Returns None when the predicted boundary is empty.
+    """
+
+    prediction = np.asarray(prediction)
+    ground_truth = np.asarray(ground_truth)
+
+    if prediction.shape != ground_truth.shape:
+        raise ValueError("Prediction and ground truth must have matching shapes.")
+
+    pred_mask = prediction == class_id
+    gt_mask = ground_truth == class_id
+
+    # Extract boundaries using binary erosion.
+    pred_boundary = pred_mask & ~binary_erosion(pred_mask)
+    gt_boundary = gt_mask & ~binary_erosion(gt_mask)
+
+    # No predicted boundary: precision is undefined.
+    if not pred_boundary.any():
+        return None
+
+    # Predicted boundary exists, but GT boundary is absent.
+    if not gt_boundary.any():
+        return 0.0
+
+    # Distance of every pixel to the nearest ground-truth boundary.
+    distances = distance_transform_edt(~gt_boundary)
+
+    # Count predicted boundary pixels within the tolerance.
+    correct_pixels = np.sum(
+        pred_boundary & (distances <= tolerance)
+    )
+
+    total_predicted_pixels = np.sum(pred_boundary)
+
+    return float(correct_pixels / total_predicted_pixels)
