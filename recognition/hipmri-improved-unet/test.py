@@ -12,8 +12,12 @@ from train import validate
 import numpy as np
 
 
-#Integrating boundary precision function
-from utils import calculate_boundary_precision
+from utils import (
+    calculate_boundary_precision,
+    count_trainable_parameters,
+    measure_gpu_memory,
+    measure_inference_time
+)
 
 def load_model(checkpoint_path, device):
     # Initialise the same architecture used during training
@@ -201,6 +205,32 @@ def evaluate_boundary_precision(model, loader, device, num_classes=6):
             f"{np.mean(class_means):.4f}"
         )
 
+# Evaluate computational efficiency of the Improved U-Net
+def evaluate_efficiency(model, loader, device):
+
+    if device.type != "cuda":
+        print("GPU benchmarking skipped: CUDA unavailable.")
+        return
+
+    # Use the same input batch size for both models.
+    images, _ = next(iter(loader))
+    images = images.to(device)
+
+    parameters = count_trainable_parameters(model)
+
+    peak_memory = measure_gpu_memory(
+        model, images, device
+    )
+
+    inference_time = measure_inference_time(
+        model, images, device
+    )
+
+    print("\nComputational Efficiency")
+    print(f"Trainable Parameters: {parameters:,}")
+    print(f"Peak GPU Memory: {peak_memory:.2f} MB")
+    print(f"Average Inference Time: {inference_time:.4f} ms/slice")
+
 def main():
     parser = argparse.ArgumentParser(
         description="Evaluate the Improved U-Net model"
@@ -240,6 +270,7 @@ def main():
 
     evaluate_model(model, loader, device)
     evaluate_boundary_precision(model, loader, device)
+    evaluate_efficiency(model, loader, device)
 
     if args.split == "test":
         find_failure_cases(
