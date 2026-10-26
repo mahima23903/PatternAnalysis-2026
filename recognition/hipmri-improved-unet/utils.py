@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import nibabel as nib
+import numpy as np
+
 
 # Verify patient-level separation to prevent data leakage
 # between training, validation, and test datasets.
@@ -86,4 +89,60 @@ def verify_image_mask_pairs(image_dir, mask_dir):
     return {
         "missing_masks": missing_masks,
         "missing_images": missing_images,
+    }
+
+def verify_spatial_alignment(image_dir, mask_dir):
+    """
+    Verify spatial consistency between MRI images and segmentation masks.
+
+    Checks:
+        1. Image and mask dimensions
+        2. Affine transformation matrices
+        3. Anatomical orientation
+    """
+
+    image_dir = Path(image_dir)
+    mask_dir = Path(mask_dir)
+
+    shape_mismatches = []
+    affine_mismatches = []
+    orientation_mismatches = []
+
+    image_files = sorted(image_dir.glob("case_*.nii.gz"))
+
+    for image_path in image_files:
+        mask_name = image_path.name.replace("case_", "seg_", 1)
+        mask_path = mask_dir / mask_name
+
+        if not mask_path.exists():
+            continue
+
+        image = nib.load(str(image_path))
+        mask = nib.load(str(mask_path))
+
+        # Check whether image and mask have identical dimensions.
+        if image.shape != mask.shape:
+            shape_mismatches.append(image_path.name)
+
+        # Check whether image and mask use matching spatial transforms.
+        if not np.allclose(image.affine, mask.affine):
+            affine_mismatches.append(image_path.name)
+
+        # Check whether image and mask have matching orientations.
+        image_orientation = nib.aff2axcodes(image.affine)
+        mask_orientation = nib.aff2axcodes(mask.affine)
+
+        if image_orientation != mask_orientation:
+            orientation_mismatches.append(image_path.name)
+
+    print("\nSpatial alignment verification")
+    print(f"Image-mask pairs checked: {len(image_files)}")
+    print(f"Shape mismatches: {len(shape_mismatches)}")
+    print(f"Affine mismatches: {len(affine_mismatches)}")
+    print(f"Orientation mismatches: {len(orientation_mismatches)}")
+
+    return {
+        "shape_mismatches": shape_mismatches,
+        "affine_mismatches": affine_mismatches,
+        "orientation_mismatches": orientation_mismatches,
     }
