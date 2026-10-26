@@ -17,7 +17,9 @@ class DoubleConv(nn.Module):
     def forward(self, x):
         return self.conv(x)
 #encoder block
-class Down(nn.Module):
+
+#ORIGINAL : Max Pooling
+'''class Down(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
 
@@ -27,9 +29,25 @@ class Down(nn.Module):
         )
 
     def forward(self, x):
+        return self.down(x)'''
+
+# ABLATION 1: Strided Convolution
+class Down(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+
+        self.down = nn.Sequential(
+            nn.Conv2d(
+                in_channels,
+                in_channels,
+                kernel_size=2,
+                stride=2
+            ),
+            DoubleConv(in_channels, out_channels)
+        )
+
+    def forward(self, x):
         return self.down(x)
-
-
 #Decoder Block
 class Up(nn.Module):
     def __init__(self, in_channels, skip_channels, out_channels):
