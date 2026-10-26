@@ -5,6 +5,8 @@ import numpy as np
 
 from scipy.ndimage import binary_erosion, distance_transform_edt
 
+import torch
+
 #Part 1 - Data Pipeline Verification
 # Verify patient-level separation to prevent data leakage
 # between training, validation, and test datasets.
@@ -257,3 +259,42 @@ def count_trainable_parameters(model):
         for parameter in model.parameters()
         if parameter.requires_grad
     )
+
+def measure_gpu_memory(model, input_tensor, device):
+    """
+    Measure peak GPU memory allocated during model inference.
+
+    Args:
+        model: Trained segmentation model.
+        input_tensor: Input MRI tensor [B, 1, H, W].
+        device: CUDA device.
+
+    Returns:
+        Peak GPU memory usage in MB.
+    """
+
+    if device.type != "cuda":
+        raise ValueError("GPU memory measurement requires CUDA.")
+
+    model.eval()
+    model = model.to(device)
+    input_tensor = input_tensor.to(device)
+
+    # Complete any previously queued GPU operations.
+    torch.cuda.synchronize(device)
+
+    # Reset peak memory statistics before measurement.
+    torch.cuda.reset_peak_memory_stats(device)
+
+    # Perform inference without calculating gradients.
+    with torch.inference_mode():
+        _ = model(input_tensor)
+
+    # Wait until GPU execution finishes.
+    torch.cuda.synchronize(device)
+
+    peak_memory_mb = (
+        torch.cuda.max_memory_allocated(device) / (1024 ** 2)
+    )
+
+    return peak_memory_mb
