@@ -98,11 +98,7 @@ def main():
     parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--data-root", type=str, default=
         "/home/groups/comp3710/HipMRI_Study_open/keras_slices_data")
-    parser.add_argument(
-    "--output-dir",
-    type=str,
-    default="checkpoints_ablation2"
-    )
+    parser.add_argument("--output-dir", type=str, default="checkpoints")
     args = parser.parse_args()
 
     torch.manual_seed(42)
