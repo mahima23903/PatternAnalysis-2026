@@ -157,49 +157,96 @@ The models are primarily compared based on their architectural differences and h
 
 ### 5.1 User Need, Scope and Acceptance Criteria
 
-The prototype aims to assist imaging specialists by generating segmentation contours for prostate radiotherapy planning, subject to expert review. The main engineering question is whether the Improved U-Net provides meaningful improvements in segmentation accuracy and boundary reliability over the standard 2D U-Net at a reasonable computational cost.
+The prototype aims to assist imaging specialists by generating segmentation contours for prostate radiotherapy planning, subject to expert review. The main engineering question is whether the Improved U-Net offers meaningful improvements in segmentation accuracy and boundary reliability over the baseline at a reasonable computational cost.
 
 **Acceptance Criteria:**
 
 - Achieve prostate-specific test Dice ≥ 0.75, with an additional mean foreground Dice target of ≥ 0.90.
 - Compare both models using per-class Dice, IoU and boundary precision on the same held-out test dataset.
 - Analyse 3–5 difficult segmentation cases using ground-truth masks, predictions and error visualisations.
-- Measure model complexity, peak GPU memory consumption and inference time.
+- Measure model complexity, peak GPU memory consumption and inference time per slice.
 
 ### 5.2 Model Choice and Course Concepts
 
 The HipMRI dataset contains 11,460 training, 660 validation and 540 test slices, separated at the patient level.
 
-The standard 2D U-Net is selected as the baseline, while the Improved U-Net incorporates residual context modules, instance normalisation, learnable downsampling, localisation modules and multi-resolution prediction fusion, inspired by Isensee et al. (2018) [2].
+The standard 2D U-Net serves as the baseline, while the Improved U-Net incorporates residual context modules, instance normalisation, learnable downsampling, localisation modules and multi-resolution prediction fusion, inspired by Isensee et al. (2018) [2].
 
-Relevant course concepts include convolutional neural networks (CNNs), encoder–decoder segmentation, residual learning and regularisation. The 2D approach offers computational advantages but does not explicitly model inter-slice continuity.
+Relevant concepts include CNNs, encoder–decoder segmentation, residual learning and regularisation. The 2D approach is computationally efficient but lacks explicit inter-slice context.
 
 ### 5.3 Preliminary Feasibility Evidence
 
-Initial dataset inspection identified inconsistent image dimensions of 256 × 128 and 256 × 144 pixels. This was addressed using symmetric zero-padding for the images and their corresponding segmentation masks. Patient-level separation between the training, validation and test sets was also verified.
+Initial dataset inspection identified inconsistent image dimensions (256 × 128 and 256 × 144), resolved using symmetric zero-padding for images and masks. Patient-level separation between the training, validation and test sets was verified.
 
-Both the baseline and Improved U-Net models were successfully implemented and trained.
+Both models were successfully implemented and trained. The Improved U-Net completed 20 epochs on Rangpur in **27 minutes and 38 seconds**, achieving a minimum validation loss of **0.0671 at epoch 4** and a mean foreground validation Dice of **0.8795**.
 
-The Improved U-Net completed 20 training epochs on Rangpur in approximately **27 minutes and 38 seconds**. The minimum recorded validation loss was **0.0671 at epoch 4**, with a mean foreground validation Dice of **0.8795**.
-
-These preliminary findings established that the architecture could be trained using the available dataset and computational resources. However, validation performance alone was insufficient to determine whether the model satisfied the prostate-specific test Dice requirement or provided meaningful improvements over the baseline.
+These findings established technical feasibility, but validation performance alone could not confirm the prostate-specific test Dice requirement or improvements over the baseline.
 
 ### 5.4 Risks, Computational Budget and Fallback
 
-**Risks:** Class imbalance, missed anatomical regions, inaccurate boundaries and the absence of explicit 3D contextual information.
+**Risks:** Class imbalance, missed anatomical regions, boundary inaccuracies and lack of explicit 3D context.
 
-**Computational Budget:** Approximately 28 minutes for a 20-epoch Improved U-Net training run, subject to GPU availability.
+**Computational Budget:** Approximately 28 minutes per 20-epoch Improved U-Net training run, subject to GPU availability.
 
-**Fallback:** Retain the standard U-Net if the Improved U-Net does not provide sufficient improvements in segmentation quality or boundary reliability to justify its computational requirements.
+**Fallback:** Retain the baseline U-Net if the Improved U-Net does not provide sufficient segmentation or boundary improvements to justify its computational cost.
 
 ### 5.5 Experimental Investigation Plan
 
-The following investigations were selected to assess the feasibility and practical suitability of the Improved U-Net:
+The following investigations were selected to assess the Improved U-Net:
 
-- **Baseline Comparison:** Evaluate the standard and Improved U-Net models using mean foreground Dice, IoU, boundary precision and class-specific performance.
-- **Architectural Ablation:** Replace max pooling in the baseline U-Net with strided convolutions to investigate the effect of learnable downsampling.
-- **Failure Analysis:** Examine difficult segmentation cases to identify missed regions, false positives and boundary inaccuracies.
-- **Computational Efficiency:** Compare trainable parameters, peak GPU memory consumption and inference time per slice.
-- **Engineering Assessment:** Evaluate the trade-offs between segmentation quality, boundary reliability and computational cost to determine the model's practical suitability and identify improvements required before deployment.
+- **Baseline Comparison:** Compare mean foreground Dice, IoU, boundary precision and per-class performance.
+- **Architectural Ablation:** Replace baseline max pooling with strided convolutions to investigate learnable downsampling.
+- **Failure Analysis:** Examine difficult cases for missed regions, false positives and boundary inaccuracies.
+- **Computational Efficiency:** Compare trainable parameters, peak GPU memory and inference time per slice.
+- **Engineering Assessment:** Assess segmentation reliability, computational trade-offs and requirements for practical deployment.
 
-The detailed implementation, experimental results, observations and inferences are presented in the following sections.
+The implementation, results, observations and inferences are presented in subsequent sections.
+
+## 6. Experimental Setup and Evaluation Metrics
+
+### 6.1 Training Configuration
+
+The baseline U-Net and Improved U-Net were implemented using PyTorch and trained for 20 epochs on the Rangpur HPC cluster using GPU acceleration.
+
+Both models used Cross-Entropy Loss for multi-class segmentation. The validation dataset was used to monitor training and select checkpoints, while the held-out test dataset was reserved for final evaluation.
+
+**Checkpoint Selection:** The checkpoint with the lowest validation loss was selected for each model rather than the final epoch. This criterion was used to favour generalisation while preventing test performance from influencing model selection.
+
+### 6.2 Evaluation Procedure
+
+Both architectures were evaluated on the same held-out test dataset, consisting of 540 MRI slices from three patients.
+
+The evaluation considered overall segmentation performance, class-specific performance and computational efficiency to identify improvements and potential trade-offs.
+
+The strided-convolution ablation model was evaluated using the same test dataset and metrics to investigate the contribution of learnable downsampling.
+
+### 6.3 Evaluation Metrics
+
+The following metrics were used to assess segmentation quality and computational efficiency.
+
+| Metric | Purpose |
+|---|---|
+| **Dice Similarity Coefficient (DSC)** | Measures overlap between predicted and ground-truth regions. |
+| **Intersection over Union (IoU)** | Measures overlap relative to the union of predicted and ground-truth regions. |
+| **Boundary Precision (2-pixel tolerance)** | Measures the proportion of predicted boundary pixels within two pixels of the ground-truth boundary. |
+| **Per-Class Dice and Boundary Precision** | Identifies performance differences across segmentation classes. |
+| **Trainable Parameters** | Measures model size in terms of trainable parameters. |
+| **Peak GPU Memory** | Measures GPU memory consumption during benchmarked evaluation. |
+| **Inference Time** | Measures prediction latency per MRI slice. |
+
+Mean foreground segmentation metrics exclude the background class (Class 0).
+
+### 6.4 Experimental Comparisons
+
+Three model configurations were evaluated:
+
+1. **Baseline U-Net:** Standard 2D U-Net using max-pooling downsampling.
+2. **Strided-Convolution Ablation:** Modified baseline U-Net with strided convolutions replacing max pooling.
+3. **Improved U-Net:** 2D architecture incorporating residual context modules, strided downsampling, localisation modules and multi-resolution prediction fusion.
+
+These comparisons assess whether the Improved U-Net's architectural changes provide sufficient improvements in segmentation quality and boundary reliability to justify their computational costs, helping determine its suitability for practical use.
+
+## 7. Experimental Results and Analysis
+
+This section evaluates whether the Improved U-Net provides sufficient improvements in segmentation quality, boundary reliability and computational efficiency to justify its selection over the baseline.
+
