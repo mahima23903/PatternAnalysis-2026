@@ -212,10 +212,9 @@ class SegmentationHead(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
-# Original multi-resolution prediction fusion (disabled for Ablation 2)
+#Adding the Deep supervision layer- predictions at multiple resoultons are generated
 # Upsamples the lower-resolution predictions and adds their logits to form the final six-class prediction.
 
-'''
 class DeepSupervision(nn.Module):
     def __init__(self, num_classes=6):
         super().__init__()
@@ -229,17 +228,15 @@ class DeepSupervision(nn.Module):
             mode="nearest"
         )
 
-'''
-# Ablation 2: Without multi-resolution prediction fusion
-
-class DeepSupervision(nn.Module):
-    def __init__(self, num_classes=6):
-        super().__init__()
-
-        self.seg_head = SegmentationHead(16, num_classes)
-
     def forward(self, d1, d2, d3):
-        return self.seg_head(d1)
+        pred_d3 = self.head_d3(d3)
+        pred_d2 = self.head_d2(d2)
+        pred_d1 = self.head_d1(d1)
+
+        combined_d2 = self.upsample(pred_d3) + pred_d2
+        combined_d1 = self.upsample(combined_d2) + pred_d1
+
+        return combined_d1
 
 
 #Assembling all the layers to a complete U-net architecture
