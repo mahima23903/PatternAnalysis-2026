@@ -264,6 +264,17 @@ Despite the baseline's stronger validation performance, the **Improved U-Net ach
 
 **Engineering implication:** The Improved U-Net offers a better balance of test performance and computational efficiency. However, the improvements are modest, and additional training runs and patient-level evaluation are recommended to confirm reliability before deployment.
 
+#### Training and Validation Performance
+
+| Training Loss | Validation Loss |
+|:---:|:---:|
+| <img src="results/figures/training_loss.png" width="400"> | <img src="results/figures/validation_loss.png" width="400"> |
+| **Validation Dice** | **Validation IoU** |
+| <img src="results/figures/validation_dice.png" width="400"> | <img src="results/figures/validation_iou.png" width="400"> |
+
+*Figure 1. Training and validation performance across 20 epochs for the baseline U-Net, Improved U-Net, and two ablation configurations.*
+
+
 ### 7.1 Baseline U-Net vs Improved U-Net
 
 **Hypothesis:** The Improved U-Net is expected to provide better segmentation performance and computational efficiency than the baseline U-Net through its residual context modules, strided convolution downsampling and multi-resolution prediction fusion.
@@ -279,12 +290,58 @@ Despite the baseline's stronger validation performance, the **Improved U-Net ach
 | Peak GPU Memory | 712.10 MB | **332.57 MB** |
 | Average Inference Time | 0.8226 ms/slice | **0.4371 ms/slice** |
 
-**Observation:** The Improved U-Net achieved slightly higher segmentation overlap and mean boundary precision while requiring substantially fewer computational resources. However, improvements were not consistent across all classes, particularly for smaller anatomical structures.
+**Observation:**
+- The Improved U-Net achieved slightly better segmentation performance, with Dice increasing from **0.8995 to 0.9046**, IoU from **0.8260 to 0.8333**, and boundary precision from **0.8196 to 0.8254**.
+- Computational efficiency improved significantly, with **59.4% fewer parameters, 53.3% less peak GPU memory and 46.9% lower inference time per slice**.
+- However, improvements were not consistent across all classes. Class 5 Dice increased from **0.7868 to 0.8309**, while Class 4 Dice decreased from **0.8322 to 0.8106**.
 
-**Inference:** The Improved U-Net offers a better balance between segmentation quality and computational efficiency. This makes it the stronger candidate for further development, although class-specific errors and boundary reliability must be investigated before considering clinical deployment.
+**Inference:** The Improved U-Net offers a better balance between segmentation performance and computational efficiency, making it the stronger candidate for further development. However, the relatively small improvements in overall segmentation quality and differences across classes require further investigation before clinical deployment.
 
+### 7.2 Ablation 1: Strided Convolution Downsampling
 
+**Hypothesis:** Replacing max pooling with strided convolutions may improve segmentation performance by allowing the model to learn how features are downsampled instead of using fixed pooling operations.
 
+**Implementation:** The max-pooling layers in the baseline U-Net were replaced with strided convolutions, while the remaining architecture was kept unchanged. The model was trained for 20 epochs and evaluated using the same patient-independent test set.
+
+| Metric | Baseline U-Net | Ablation 1 |
+|---|---:|---:|
+| Mean Foreground Dice | 0.8995 | **0.9003** |
+| Mean Foreground IoU | 0.8260 | **0.8269** |
+| Mean Boundary Precision (2 px) | 0.8196 | **0.8235** |
+| Trainable Parameters | **7,846,246** | 8,194,886 |
+| Peak GPU Memory | **712.10 MB** | 713.43 MB |
+| Average Inference Time | **0.8226 ms/slice** | 0.8470 ms/slice |
+
+**Observation:**
+- Ablation 1 achieved slightly better Dice (+0.0008), IoU (+0.0009) and boundary precision (+0.0039). However, these improvements were very small.
+- The number of trainable parameters increased by approximately **4.4%**, while inference time increased by **3.0%**, making the model slightly more computationally expensive.
+- The training curves also showed instability, particularly at epochs 5 and 16, where validation Dice dropped significantly before recovering.
+
+**Inference:** Although strided convolutions provided a small improvement in segmentation performance, the difference was not substantial enough to justify the additional parameters and inference time. The training fluctuations also raise concerns about the consistency of this approach. Therefore, **replacing max pooling with strided convolutions alone is not recommended**, as the baseline achieves nearly identical results with fewer computational resources and more stable training behaviour in this experiment.
+
+### 7.3 Ablation 2: Removing Multi-Resolution Prediction Fusion
+
+**Hypothesis:** Combining predictions from multiple decoder resolutions may improve segmentation performance by incorporating information from different spatial scales. Removing this feature may reduce segmentation accuracy, particularly for smaller anatomical structures.
+
+**Implementation:** Multi-resolution prediction fusion was removed from the Improved U-Net, allowing the model to generate predictions using only the final decoder output. The remaining architecture was kept unchanged. The model was trained for 20 epochs and evaluated on the same patient-independent test set.
+
+| Metric | Improved U-Net | Ablation 2 |
+|---|---:|---:|
+| Mean Foreground Dice | **0.9046** | 0.9026 |
+| Mean Foreground IoU | **0.8333** | 0.8305 |
+| Mean Boundary Precision (2 px) | 0.8254 | **0.8314** |
+| Trainable Parameters | 3,184,850 | **3,184,262** |
+| Peak GPU Memory | 332.57 MB | **332.56 MB** |
+| Average Inference Time | 0.4371 ms/slice | **0.4305 ms/slice** |
+
+**Observation:**
+
+- Removing multi-resolution prediction fusion resulted in a small reduction in segmentation performance, with Dice decreasing from **0.9046 to 0.9026** and IoU from **0.8333 to 0.8305**.
+- Boundary precision improved slightly from **0.8254 to 0.8314**, suggesting that removing fusion did not negatively affect every evaluation metric.
+- The number of trainable parameters decreased by only **588**, while GPU memory usage and inference time remained almost identical.
+- Class-level performance also varied. Class 4 Dice increased from **0.8106 to 0.8252**, while Class 5 Dice decreased from **0.8309 to 0.8055**.
+
+**Inference:** Multi-resolution prediction fusion provided a small improvement in overall Dice and IoU, without substantially increasing computational requirements. Although Ablation 2 achieved slightly better boundary precision, the improvement was not sufficient to outweigh the reduction in overall segmentation overlap. Therefore, **retaining multi-resolution prediction fusion is preferred**, as it provides slightly better overall segmentation performance with almost no additional computational cost.
 
 
 
