@@ -250,3 +250,51 @@ These comparisons assess whether the Improved U-Net's architectural changes prov
 
 This section evaluates whether the Improved U-Net provides sufficient improvements in segmentation quality, boundary reliability and computational efficiency to justify its selection over the baseline.
 
+### Training and Validation Behaviour
+
+All four models were trained for **20 epochs**, with training loss, validation loss, Dice and IoU recorded to assess convergence and training stability.
+
+The key observations from the training curves are:
+
+- **Baseline U-Net:** Demonstrated stable convergence and generally achieved the highest validation performance, reaching approximately **0.90 Dice and 0.82 IoU**.
+- **Improved U-Net and Ablation 2:** Both showed relatively stable convergence, with validation Dice generally ranging between **0.87 and 0.89** after the initial epochs.
+- **Ablation 1 (Strided Convolutions):** Showed significant instability. Validation Dice dropped from **0.8645 to 0.2129** at epoch 5, with another sharp decline to approximately **0.38** at epoch 16. Although performance recovered, it finished with a validation Dice of approximately **0.79**.
+
+Despite the baseline's stronger validation performance, the **Improved U-Net achieved better results on the held-out test set**, with a Dice of **0.9046 versus 0.8995** and IoU of **0.8333 versus 0.8260**. It also used **59.4% fewer parameters, 53.3% less peak GPU memory and 46.9% less inference time per slice**.
+
+**Engineering implication:** The Improved U-Net offers a better balance of test performance and computational efficiency. However, the improvements are modest, and additional training runs and patient-level evaluation are recommended to confirm reliability before deployment.
+
+### 7.1 Baseline U-Net vs Improved U-Net
+
+**Hypothesis:** The Improved U-Net is expected to provide better segmentation performance and computational efficiency than the baseline U-Net through its residual context modules, strided convolution downsampling and multi-resolution prediction fusion.
+
+**Implementation:** Both models were evaluated on the same patient-independent test split using foreground Dice, IoU, boundary precision (2-pixel tolerance) and computational efficiency metrics.
+
+| Metric | Baseline U-Net | Improved U-Net |
+|---|---:|---:|
+| Mean Foreground Dice | 0.8995 | **0.9046** |
+| Mean Foreground IoU | 0.8260 | **0.8333** |
+| Mean Boundary Precision | 0.8196 | **0.8254** |
+| Trainable Parameters | 7,846,246 | **3,184,850** |
+| Peak GPU Memory | 712.10 MB | **332.57 MB** |
+| Average Inference Time | 0.8226 ms/slice | **0.4371 ms/slice** |
+
+**Observation:** The Improved U-Net achieved slightly higher segmentation overlap and mean boundary precision while requiring substantially fewer computational resources. However, improvements were not consistent across all classes, particularly for smaller anatomical structures.
+
+**Inference:** The Improved U-Net offers a better balance between segmentation quality and computational efficiency. This makes it the stronger candidate for further development, although class-specific errors and boundary reliability must be investigated before considering clinical deployment.
+
+
+
+
+
+
+## Declaration:
+### Git Commit Authorship Declaration
+
+During this project, I realised that my local Git configuration was still using my brother's name and email address, as he had previously used my laptop. Unfortunately, I did not notice this earlier, so several of my commits were recorded under his name instead of mine.
+
+I would like to clarify that I completed all the development, implementation, experiments and documentation for this assessment independently. The repository was also forked and maintained through my own GitHub account (`mahima23903`).
+
+As soon as I noticed the issue, I contacted the teaching staff to explain the situation and ask for guidance. Following their advice, I corrected my local Git configuration so that my future commits would appear under my own name. I have not changed any of the previous commits. I have got permission for the same.
+
+The teaching staff confirmed that I could continue with my existing commit history and advised me to include a short declaration explaining the situation. I have also included screenshots of our discussion as supporting evidence and change of configuration.
