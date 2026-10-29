@@ -343,6 +343,70 @@ Despite the baseline's stronger validation performance, the **Improved U-Net ach
 
 **Inference:** Multi-resolution prediction fusion provided a small improvement in overall Dice and IoU, without substantially increasing computational requirements. Although Ablation 2 achieved slightly better boundary precision, the improvement was not sufficient to outweigh the reduction in overall segmentation overlap. Therefore, **retaining multi-resolution prediction fusion is preferred**, as it provides slightly better overall segmentation performance with almost no additional computational cost.
 
+ ## 8. Failure Case Analysis
+
+Although the Improved U-Net achieved better overall segmentation performance, individual test slices were examined to identify segmentation errors and understand where the architectural modifications provided improvements.
+
+Five representative cases were selected to investigate missed segmentations, false-positive predictions and differences between the baseline and Improved U-Net.
+
+### 8.1 Missed Segmentations
+
+**Case 1: `case_040_week_0_slice_38`**
+
+![Case 1 — Segmentation comparison](results/figures/comparison_case_040_week_0_slice_38.nii.gz.png)
+
+**Observation:**
+- The baseline U-Net partially identified the Class 5 region, achieving a Dice score of **0.3614**, while the Improved U-Net failed to identify it (**Dice = 0**).
+- This demonstrates that the Improved U-Net does not consistently outperform the baseline across every individual slice.
+
+**Inference:** Although the Improved U-Net achieved better overall performance, it can still miss certain small labelled regions that the baseline partially detects. This limitation should be considered when assessing segmentation reliability.
+
+**Case 2: `case_040_week_1_slice_20`**
+
+![Case 2 — Segmentation comparison](results/figures/comparison_case_040_week_1_slice_20.nii.gz.png)
+
+**Observation:**
+- Both models failed to detect a small Class 5 region present in the ground truth, resulting in a Dice score of **0** for both models.
+- The models were able to segment the surrounding larger regions more consistently.
+
+**Inference:** Both architectures face difficulties identifying certain small labelled regions. This suggests that further investigation into class representation and small-region segmentation may be beneficial.
+
+### 8.2 False-Positive Predictions
+
+**Case 3: `case_040_week_2_slice_51`**
+
+![Case 3 — Segmentation comparison](results/figures/comparison_case_040_week_2_slice_51.nii.gz.png)
+
+**Observation:**
+- Both models incorrectly predicted regions belonging to Classes 3 and 5, although these classes were absent from the ground truth.
+- The baseline produced a more noticeable incorrect region, while the Improved U-Net also generated smaller false-positive regions.
+
+**Inference:** Both models can incorrectly assign segmentation labels to regions where the corresponding class is absent. This indicates that false-positive predictions remain a limitation, even when overall segmentation performance is relatively high.
+
+### 8.3 Improved Segmentation Performance
+
+**Case 4: `case_041_week_0_slice_20`**
+
+![Case 4 — Segmentation comparison](results/figures/comparison_case_041_week_0_slice_20.nii.gz.png)
+
+**Observation:**
+- The Improved U-Net achieved a Class 5 Dice score of **0.7500**, compared with **0.2273** for the baseline.
+- The Improved U-Net prediction more closely matched the ground truth in size and location.
+
+**Inference:** The Improved U-Net demonstrated better segmentation of this labelled region, suggesting that the architectural modifications may help improve predictions in certain challenging cases.
+
+**Case 5: `case_042_week_0_slice_15`**
+
+![Case 5 — Segmentation comparison](results/figures/comparison_case_042_week_0_slice_15.nii.gz.png)
+
+**Observation:**
+- The Improved U-Net achieved a Class 5 Dice score of **0.7928**, compared with **0.2831** for the baseline.
+- The Improved U-Net prediction showed better agreement with the ground truth.
+
+**Inference:** This provides further evidence that the Improved U-Net can improve segmentation performance on certain challenging regions, although these improvements are not consistent across every slice.
+
+
+
 
 
 ## Declaration:
