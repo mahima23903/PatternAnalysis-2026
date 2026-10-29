@@ -405,9 +405,73 @@ Five representative cases were selected to investigate missed segmentations, fal
 
 **Inference:** This provides further evidence that the Improved U-Net can improve segmentation performance on certain challenging regions, although these improvements are not consistent across every slice.
 
+## 9. Engineering Decision and Recommendation
 
+Based on the experiments, I recommend the **Improved U-Net** as the preferred model for further development and evaluation of the Hip MRI segmentation task. While the improvement in segmentation accuracy is relatively small, the model offers substantial computational advantages over the baseline.
 
+### 9.1 Performance and Efficiency
 
+The Improved U-Net achieved a mean foreground Dice score of **0.9046**, compared to **0.8995** for the baseline U-Net.
+
+More importantly, it achieved this result with considerably fewer computational resources.
+
+| Metric | Baseline U-Net | Improved U-Net | Difference |
+|---|---:|---:|---:|
+| Mean foreground Dice | 0.8995 | **0.9046** | +0.0051 |
+| Parameters | 7,846,246 | **3,184,850** | 59.4% fewer |
+| Peak GPU memory | 712.10 MB | **332.57 MB** | 53.3% lower |
+| Inference time per slice | 0.8226 ms | **0.4371 ms** | 46.9% faster |
+
+These results make the Improved U-Net a more efficient option without sacrificing overall segmentation performance. Its lower memory requirements and faster inference also make it more practical for further experimentation with limited computing resources.
+
+### 9.2 What the Ablation Studies Showed
+
+The ablation studies helped determine whether individual architectural changes contributed to the results.
+
+Replacing max-pooling with strided convolution in the baseline U-Net produced only a marginal improvement in Dice, while increasing the parameter count and inference time. This suggests that changing the downsampling method alone does not provide a meaningful advantage.
+
+Removing multi-resolution prediction fusion from the Improved U-Net reduced mean foreground Dice from **0.9046 to 0.9026**, with almost no reduction in computational cost. Based on this result, I recommend retaining the fusion component.
+
+Overall, the complete Improved U-Net performed better than the tested alternatives in terms of the balance between accuracy and efficiency.
+
+### 9.3 Reliability and Remaining Limitations
+
+The failure-case analysis showed that the Improved U-Net performed considerably better than the baseline on some challenging Class 5 regions. However, it also missed certain small regions and produced false-positive predictions.
+
+The model also achieved a lower Dice score for Class 4 (**0.8106**) than the baseline (**0.8322**). This is an area that requires further investigation.
+
+Another consideration is the size of the test set. Although the evaluation included **540 slices**, these came from only **three patients**. The results are therefore promising but do not provide enough evidence to confirm that the model will perform consistently across a wider patient population.
+
+### 9.4 Recommendation and Next Steps
+
+I recommend proceeding with the **Improved U-Net** for further research and optimisation. It provides slightly better overall segmentation results while requiring substantially less memory, fewer parameters and less inference time than the baseline.
+
+Before considering the model for practical use, I would prioritise evaluating it on more patients, testing consistency across repeated training runs, and investigating the errors observed in small regions and Class 4 predictions.
+
+Based on the current evidence, the Improved U-Net offers the best overall engineering trade-off among the four models evaluated. However, additional validation is required before it can be considered suitable for clinical applications.
+
+## 10. Project Structure and Reproducibility
+
+The repository contains the implementations of the four evaluated models, along with the code used for data preprocessing, training and evaluation.
+
+### 10.1 Project Structure
+
+The project is organised into the following components:
+
+- **Dataset processing:** Loads MRI slices and their corresponding segmentation masks, performs normalisation and prepares the input tensors.
+- **Model implementations:** Contains the baseline U-Net, Improved U-Net and their ablation variants.
+- **Training and evaluation:** Includes the scripts used to train the models, evaluate saved checkpoints and calculate performance metrics.
+- **Results and visualisations:** Contains training curves and segmentation comparisons used to support the experimental findings.
+
+### 10.2 Reproducing the Experiments
+
+The experiments were conducted using PyTorch on the Rangpur computing cluster.
+
+To reproduce the experiments, the required dataset must be available, and the training and evaluation scripts must be configured with the appropriate dataset paths and model settings.
+
+The original experiments used patient-independent dataset partitions. The same partitions and evaluation settings should be maintained when comparing model performance.
+
+The reported results were obtained from the saved model checkpoints. Additional runs may produce slightly different results due to variations in model initialisation and training conditions.
 
 ## Declaration:
 ### Git Commit Authorship Declaration
