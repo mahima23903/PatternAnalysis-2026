@@ -1,5 +1,8 @@
 # HipMRI Segmentation Using an Improved U-Net
 
+**Student Name:** Mahima Gokarnesan  
+**Student Number:** 49290967  
+
 ## 1. Introduction
 
 Medical image segmentation involves identifying and classifying anatomical regions within medical images. In prostate radiotherapy planning, accurate segmentation is important for identifying anatomical structures and their boundaries, as errors may affect treatment planning and the reliability of subsequent analysis.
@@ -120,6 +123,12 @@ Finally, a 1 × 1 convolution produces six output channels corresponding to the 
 
 The baseline provides a reference for assessing whether the additional architectural complexity of the Improved U-Net delivers practical benefits.
 
+<p align="center">
+  <img src="results/figures/baseline_unet_isensee_style.png" width="85%">
+</p>
+<p align="center"><b>Figure: Baseline U-Net Architecture (AI-generated illustration)</b></p>
+
+
 ### 4.2 Improved U-Net
 
 The Improved U-Net is implemented as a 2D adaptation of the architecture proposed by Isensee et al. (2018) [2]. It retains the U-Net encoder–decoder structure while introducing residual context modules, strided convolutions, localisation modules and multi-resolution prediction fusion.
@@ -132,9 +141,12 @@ The architecture consists of the following components:
 
 3. Multi-resolution Prediction Fusion: Segmentation predictions are generated at three decoder resolutions using 1 × 1 convolutions. Lower-resolution predictions are progressively upsampled and combined through element-wise addition to produce the final six-class segmentation logits.
 
-## img 
-
 The architecture is designed to incorporate contextual information from multiple spatial resolutions while maintaining a relatively lightweight model. Its effectiveness is assessed through segmentation accuracy, boundary precision and computational efficiency rather than architectural complexity alone.
+
+<p align="center">
+  <img src="results/figures/improved_unet_isensee_style.png" width="85%">
+</p>
+<p align="center"><b>Figure: Improved U-Net Architecture (AI-generated illustration)</b></p>
 
 ### 4.3 Architecture Comparison
 
@@ -155,6 +167,8 @@ The following table summarises the main architectural differences between the ba
 | Output | Six-class segmentation logits | Six-class segmentation logits |
 
 The models are primarily compared based on their architectural differences and how these differences influence their performance. Their effects on segmentation accuracy, boundary reliability and computational efficiency are examined in the experimental results.
+
+**Note:** Both architecture diagrams were generated with AI assistance to illustrate the implemented model structures. The diagrams are intended as visual representations of the architectures described in this project.
 
 ## 5. Feasibility Review — HipMRI Improved U-Net
 
@@ -280,7 +294,7 @@ Despite the baseline's stronger validation performance, the **Improved U-Net ach
 | **Validation Dice** | **Validation IoU** |
 | <img src="results/figures/validation_dice.png" width="400"> | <img src="results/figures/validation_iou.png" width="400"> |
 
-*Figure 1. Training and validation performance across 20 epochs for the baseline U-Net, Improved U-Net, and two ablation configurations.*
+*Figure: Training and validation performance across 20 epochs for the baseline U-Net, Improved U-Net, and two ablation configurations.*
 
 
 ### 7.1 Baseline U-Net vs Improved U-Net
