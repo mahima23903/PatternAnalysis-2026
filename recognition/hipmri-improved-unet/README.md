@@ -494,7 +494,7 @@ Based on the current evidence, the Improved U-Net offers the best overall engine
 
 If developed further, the model should be considered as an annotation assistant whose predicted contours are reviewed and corrected by imaging specialists, rather than as an autonomous clinical segmentation system.
 
-## 10. Project Structure and Reproducibility
+## 10. Project Structure
 
 The repository contains the implementations of the baseline U-Net and Improved U-Net, along with the code used for data preprocessing, training, evaluation and visualisation. Two additional ablation experiments were conducted by modifying the existing architectures during experimentation.
 
@@ -524,12 +524,14 @@ The baseline U-Net was adapted from Ronneberger et al. [1], while the Improved U
 
 ### Other References
 [1] PyTorch - https://docs.pytorch.org/docs/2.15/index.html 
+
 [2] https://medium.com/@Phineouse/cnn-part-3-why-padding-striding-and-pooling-are-essential-in-cnn-architecture-7d48ad7612fb
 
 ### AI Tools
 I have used AI tools to assist with code development and debugging, conceptual learning and analysis, code structuring, and paraphrasing and grammatical corrections in the README.
 
 **Tools Used**
+
 ChatGPT - https://chatgpt.com
 
 **Example Prompts**:
