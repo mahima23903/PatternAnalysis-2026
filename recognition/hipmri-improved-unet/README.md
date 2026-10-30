@@ -545,7 +545,7 @@ During this project, I realised that my local Git configuration was still using 
 
 I would like to clarify that I completed all the development, implementation, experiments and documentation for this assessment independently. The repository was also forked and maintained through my own GitHub account (`mahima23903`).
 
-As soon as I noticed the issue, I contacted the teaching staff to explain the situation and ask for guidance. Following their advice, I corrected my local Git configuration so that my future commits would appear under my own name. I have not changed any of the previous commits. I have got permission for the same.
+As soon as I noticed the issue, I contacted the teaching staff to explain the situation and ask for guidance. Following their advice, I corrected my local Git configuration so that my future commits would appear under my own name. I have not changed any of the previous commits. I received permission from the teaching staff to retain the existing commit history.
 
 The teaching staff confirmed that I could continue with my existing commit history and advised me to include a short declaration explaining the situation. I have also included screenshots of our discussion as supporting evidence and change of configuration.
 
