@@ -49,6 +49,79 @@ def visualize_segmentation(image, ground_truth, baseline_prediction,
     print(f"Saved comparison: {output_path}")
 
 
+def visualize_error_maps(ground_truth, baseline_prediction,
+                         improved_prediction, filename):
+
+    ground_truth = ground_truth.cpu().numpy()
+    baseline_prediction = baseline_prediction.cpu().numpy()
+    improved_prediction = improved_prediction.cpu().numpy()
+
+    # Error maps:
+    # 0 = correct prediction
+    # 1 = false positive (background predicted as foreground)
+    # 2 = false negative (foreground predicted as background)
+    # 3 = incorrect foreground class
+
+    def create_error_map(prediction):
+        error_map = np.zeros_like(ground_truth, dtype=np.uint8)
+
+        error_map[(ground_truth == 0) & (prediction != 0)] = 1
+        error_map[(ground_truth != 0) & (prediction == 0)] = 2
+        error_map[
+            (ground_truth != 0) &
+            (prediction != 0) &
+            (ground_truth != prediction)
+        ] = 3
+
+        return error_map
+
+    baseline_errors = create_error_map(baseline_prediction)
+    improved_errors = create_error_map(improved_prediction)
+
+    from matplotlib.colors import ListedColormap
+    from matplotlib.patches import Patch
+
+    colors = ["white", "red", "blue", "orange"]
+    cmap = ListedColormap(colors)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+    axes[0].imshow(baseline_errors, cmap=cmap, vmin=0, vmax=3)
+    axes[0].set_title("Baseline U-Net Errors")
+
+    axes[1].imshow(improved_errors, cmap=cmap, vmin=0, vmax=3)
+    axes[1].set_title("Improved U-Net Errors")
+
+    for ax in axes:
+        ax.axis("off")
+
+    legend_elements = [
+        Patch(facecolor="white", label="Correct"),
+        Patch(facecolor="red", label="False Positive"),
+        Patch(facecolor="blue", label="False Negative"),
+        Patch(facecolor="orange", label="Wrong Foreground Class")
+    ]
+
+    fig.legend(
+        handles=legend_elements,
+        loc="lower center",
+        ncol=4
+    )
+
+    fig.suptitle(filename)
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
+
+    output_dir = Path("failure_visualizations")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    output_path = output_dir / f"errors_{Path(filename).name}.png"
+
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"Saved error map: {output_path}")
+
+
 #Loading specific MRI slice and generating predictions
 def load_mri_slice(dataset, filename):
     for index, image_path in enumerate(dataset.image_files):
@@ -234,6 +307,13 @@ def main():
             filename
         )
 
+        visualize_error_maps(
+            ground_truth,
+            baseline_prediction,
+            improved_prediction,
+            filename
+        )
+
         # Find two cases where Improved U-Net performs better
     improvement_cases = find_improvement_cases(
         dataset,
@@ -262,6 +342,13 @@ def main():
 
         visualize_segmentation(
             image,
+            ground_truth,
+            baseline_prediction,
+            improved_prediction,
+            filename
+        )
+
+        visualize_error_maps(
             ground_truth,
             baseline_prediction,
             improved_prediction,
