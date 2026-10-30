@@ -2,19 +2,19 @@
 
 ## 1. Introduction
 
-Medical image segmentation involves identifying and classifying anatomical regions within medical images. Accurate segmentation is important for medical image analysis, as errors in identifying anatomical structures and their boundaries can affect the reliability of subsequent analysis.
+Medical image segmentation involves identifying and classifying anatomical regions within medical images. In prostate radiotherapy planning, accurate segmentation is important for identifying anatomical structures and their boundaries, as errors may affect treatment planning and the reliability of subsequent analysis.
 
 U-Net is a widely used convolutional neural network architecture for medical image segmentation. Although conventional 2D U-Net models can achieve high segmentation accuracy, their predictions may still contain boundary inaccuracies, missed structures and false-positive regions. Furthermore, evaluating segmentation performance using only overall metrics such as Dice similarity can conceal errors affecting individual anatomical classes.
 
 This project investigates an **Improved 2D U-Net architecture** for multi-class segmentation of HipMRI images. A standard 2D U-Net is implemented as the baseline, while the improved architecture incorporates residual context modules, learnable downsampling, localisation modules and multi-scale prediction fusion.
 
-The primary objective is to investigate whether the Improved U-Net provides better segmentation performance and boundary precision than the standard U-Net while maintaining reasonable computational efficiency. Both architectures are evaluated using the same held-out test dataset, with comparisons based on Dice similarity, Intersection over Union (IoU), boundary precision, model complexity, GPU memory consumption and inference time.
+The primary objective is to investigate whether these architectural modifications provide meaningful improvements in segmentation performance and boundary precision compared with the standard U-Net, while considering their computational requirements. Both architectures are evaluated using the same held-out test dataset, with comparisons based on Dice similarity, Intersection over Union (IoU), boundary precision, model complexity, GPU memory consumption and inference time.
 
-In addition to quantitative evaluation, the project examines individual segmentation failures to identify limitations that may not be apparent from aggregate performance metrics. Based on the experimental findings, the project assesses whether the Improved U-Net offers a suitable balance between segmentation accuracy, boundary reliability and computational efficiency, while identifying the limitations and improvements that must be addressed before practical deployment.
+In addition to quantitative evaluation, the project examines individual segmentation failures to identify limitations that may not be apparent from aggregate performance metrics. Based on the experimental findings, the project assesses whether the Improved U-Net offers a suitable balance between segmentation accuracy, boundary reliability and computational efficiency for further development as an annotation assistant, while identifying the limitations that require additional investigation.
 
 ## 2. Project Structure
 
-The project is organised into separate modules for dataset preparation, model implementation, training, evaluation and failure-case analysis. The baseline U-Net implementation is maintained in a separate directory to support comparisons with the Improved U-Net.
+The project is organised into separate modules for dataset preparation, model implementation, training, prediction, evaluation and failure-case analysis. The baseline U-Net implementation is maintained in a separate directory to support comparisons with the Improved U-Net.
 
 ```text
 hipmri-improved-unet/
@@ -23,29 +23,34 @@ hipmri-improved-unet/
 ├── dataset.py
 ├── modules.py
 ├── train.py
+├── predict.py
 ├── test.py
 ├── utils.py
 ├── visual_failure.py
 │
-└── baseline_unet/
-    ├── modules.py
-    ├── train.py
-    └── test.py
+├── baseline_unet/
+│   ├── modules.py
+│   ├── train.py
+│   └── test.py
+│
+└── results/
+    └── figures/
 ```
 
 **File descriptions:**
 
-- `README.md` — Project documentation, experimental results and research findings.
+- `README.md` — Project documentation, experimental results and engineering recommendations.
 - `dataset.py` — Loads HipMRI images and segmentation masks and applies preprocessing.
-- `modules.py` — Defines the Improved U-Net architecture.
-- `train.py` — Implements the Improved U-Net training and validation pipeline.
-- `test.py` — Evaluates the Improved U-Net on the selected dataset split.
+- `modules.py` — Defines the Improved U-Net architecture and its components.
+- `train.py` — Implements model training and validation.
+- `predict.py` — Loads trained models, generates segmentation predictions and visualises baseline comparisons.
+- `test.py` — Evaluates the Improved U-Net using segmentation and computational metrics.
 - `utils.py` — Provides shared evaluation utilities and segmentation metrics.
-- `visual_failure.py` — Generates visualisations for analysing segmentation errors.
+- `visual_failure.py` — Generates visualisations for analysing segmentation failures.
 - `baseline_unet/modules.py` — Defines the baseline U-Net architecture.
 - `baseline_unet/train.py` — Implements baseline U-Net training and validation.
-- `baseline_unet/test.py` — Evaluates the baseline U-Net using the same test dataset.
-
+- `baseline_unet/test.py` — Evaluates the baseline U-Net on the same test dataset.
+- `results/figures/` — Contains training curves and selected segmentation comparison figures.
 
 ## 3. Dataset and Preprocessing
 
@@ -472,6 +477,35 @@ To reproduce the experiments, the required dataset must be available, and the tr
 The original experiments used patient-independent dataset partitions. The same partitions and evaluation settings should be maintained when comparing model performance.
 
 The reported results were obtained from the saved model checkpoints. Additional runs may produce slightly different results due to variations in model initialisation and training conditions.
+
+## 11. References and Dataset Acknowledgement
+
+### References
+
+[1] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional Networks for Biomedical Image Segmentation,” *Medical Image Computing and Computer-Assisted Intervention (MICCAI)*, pp. 234–241, 2015. DOI: 10.1007/978-3-319-24574-4_28.
+
+[2] F. Isensee, P. Kickingereder, W. Wick, M. Bendszus, and K. H. Maier-Hein, “Brain Tumor Segmentation and Radiomics Survival Prediction: Contribution to the BRATS 2017 Challenge,” *Brainlesion: Glioma, Multiple Sclerosis, Stroke and Traumatic Brain Injuries*, pp. 287–297, 2018. DOI: 10.1007/978-3-319-75238-9_25.
+
+### Dataset Acknowledgement
+
+Data were provided in part by the HipMRI Study. The dataset was used for academic research and evaluation of MRI segmentation models.
+
+The baseline U-Net was adapted from Ronneberger et al. [1], while the Improved U-Net was developed using architectural ideas from Isensee et al. [2]. Both architectures were adapted for the six-class, 2D Hip MRI segmentation task.
+
+### Other References
+[1] PyTorch - https://docs.pytorch.org/docs/2.15/index.html 
+[2] https://medium.com/@Phineouse/cnn-part-3-why-padding-striding-and-pooling-are-essential-in-cnn-architecture-7d48ad7612fb
+
+### AI Tools
+I have used AI tools to assist with code development and debugging, conceptual learning and analysis, code structuring, and paraphrasing and grammatical corrections in the README.
+
+**Tools Used**
+ChatGPT - https://chatgpt.com
+
+**Example Prompts**:
+1. Rewrite the following paragraph without grammatical errors.
+2. Verify the following code snippet and correct any errors.
+3. Help me understand the following code structure.
 
 ## Declaration:
 ### Git Commit Authorship Declaration
