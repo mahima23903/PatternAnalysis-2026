@@ -413,6 +413,26 @@ Five representative cases were selected to investigate missed segmentations, fal
 
 **Inference:** This provides further evidence that the Improved U-Net can improve segmentation performance on certain challenging regions, although these improvements are not consistent across every slice.
 
+### 8.4 False-Positive, False-Negative and Foreground-Class Error Analysis
+
+The following error maps compare the baseline and Improved U-Net across five selected test slices. Red indicates false positives, blue indicates false negatives, and orange indicates incorrect foreground-class predictions.
+
+<p align="center">
+  <img src="results/figures/errors_case_040_week_0_slice_38.nii.gz.png" width="48%">
+  <img src="results/figures/errors_case_040_week_1_slice_20.nii.gz.png" width="48%">
+</p>
+
+<p align="center">
+  <img src="results/figures/errors_case_040_week_2_slice_51.nii.gz.png" width="48%">
+  <img src="results/figures/errors_case_041_week_0_slice_20.nii.gz.png" width="48%">
+</p>
+
+<p align="center">
+  <img src="results/figures/errors_case_042_week_0_slice_15.nii.gz.png" width="48%">
+</p>
+
+**Observations:** Most visible errors involve confusion between foreground classes, particularly around anatomical boundaries. The Improved U-Net reduces some isolated false positives, but class confusion and false negatives remain. These examples illustrate limitations that persist despite its higher overall Dice score.
+
 ## 9. Engineering Decision and Recommendation
 
 Based on the experiments, I recommend the **Improved U-Net** as the preferred model for further development and evaluation of the Hip MRI segmentation task. While the improvement in segmentation accuracy is relatively small, the model offers substantial computational advantages over the baseline.
@@ -464,7 +484,7 @@ If developed further, the model should be considered as an annotation assistant 
 
 The repository contains the implementations of the baseline U-Net and Improved U-Net, along with the code used for data preprocessing, training, evaluation and visualisation. Two additional ablation experiments were conducted by modifying the existing architectures during experimentation.
 
-### 10.1 Project Structure
+### Project Structure
 
 The project is organised into the following components:
 
@@ -473,39 +493,6 @@ The project is organised into the following components:
 - **Training and evaluation:** Includes the scripts used to train the models, evaluate saved checkpoints and calculate performance metrics.
 - **Results and visualisations:** Contains training curves and segmentation comparisons used to support the experimental findings.
 
-### 10.2 Reproducing the Experiments
-
-The experiments were conducted using PyTorch on the Rangpur computing cluster.
-
-To reproduce the experiments, the required dataset must be available, and the training and evaluation scripts must be configured with the appropriate dataset paths and model settings.
-
-The following commands can be used from the project directory:
-
-**Train the Improved U-Net:**
-
-```bash
-python train.py --epochs 20 --output-dir checkpoints_improved_20
-```
-
-**Evaluate the trained Improved U-Net:**
-
-```bash
-python test.py
-```
-
-**Run prediction and generate a segmentation comparison:**
-
-```bash
-python predict.py --filename case_040_week_0_slice_38.nii.gz
-```
-
-The repository retains the final baseline and Improved U-Net implementations. The two ablation configurations are not maintained as separate model implementations; therefore, reproducing those experiments requires applying the architectural modifications described in Section 7.
-
-The original experiments used patient-independent dataset partitions consisting of 31 training patients, four validation patients and three test patients. The same partitions and evaluation settings should be maintained when comparing model performance.
-
-The reported results were obtained from saved model checkpoints. The original dataset and trained model checkpoints are not included in the repository due to storage and dataset distribution constraints.
-
-Additional training runs may produce slightly different results due to variations in model initialisation and training conditions. Further evaluation across multiple runs and additional patients is recommended to assess the consistency of the findings.
 
 ## 11. References and Dataset Acknowledgement
 
