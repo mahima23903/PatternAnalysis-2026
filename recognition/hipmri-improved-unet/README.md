@@ -65,7 +65,7 @@ Each segmentation mask contains integer labels ranging from 0 to 5, representing
 
 ### 3.2 Dataset Splitting
 
-The dataset is divided into training, validation and testing subsets. Patient-level separation is used to prevent MRI scans from the same patient appearing in multiple subsets and to avoid data leakage.
+The dataset is divided into training, validation and testing subsets. Patient-level separation is used and verified to prevent MRI scans from the same patient appearing in multiple subsets and to avoid data leakage.
 
 | Dataset Property | Training | Validation | Testing |
 |---|---:|---:|---:|
@@ -166,7 +166,7 @@ The prototype aims to assist imaging specialists by generating segmentation cont
 
 **Acceptance Criteria:**
 
-- Achieve prostate-specific test Dice ≥ 0.75, with an additional mean foreground Dice target of ≥ 0.90.
+- Achieve a test Dice ≥ 0.75 for each foreground segmentation class, with an additional mean foreground Dice target of ≥ 0.90.
 - Compare both models using per-class Dice, IoU and boundary precision on the same held-out test dataset.
 - Analyse 3–5 difficult segmentation cases using ground-truth masks, predictions and error visualisations.
 - Measure model complexity, peak GPU memory consumption and inference time per slice.
@@ -185,7 +185,7 @@ Initial dataset inspection identified inconsistent image dimensions (256 × 128 
 
 Both models were successfully implemented and trained. The Improved U-Net completed 20 epochs on Rangpur in **27 minutes and 38 seconds**, achieving a minimum validation loss of **0.0671 at epoch 4** and a mean foreground validation Dice of **0.8795**.
 
-These findings established technical feasibility, but validation performance alone could not confirm the prostate-specific test Dice requirement or improvements over the baseline.
+These findings established technical feasibility, but validation performance alone could not confirm whether all foreground classes achieved the required test Dice or whether the Improved U-Net outperformed the baseline.
 
 ### 5.4 Risks, Computational Budget and Fallback
 
@@ -200,7 +200,7 @@ These findings established technical feasibility, but validation performance alo
 The following investigations were selected to assess the Improved U-Net:
 
 - **Baseline Comparison:** Compare mean foreground Dice, IoU, boundary precision and per-class performance.
-- **Architectural Ablation:** Replace baseline max pooling with strided convolutions to investigate learnable downsampling.
+- **Architectural Ablation:** Replace baseline max pooling with strided convolutions to investigate learnable downsampling, and remove multi-resolution prediction fusion from the Improved U-Net to assess its contribution.
 - **Failure Analysis:** Examine difficult cases for missed regions, false positives and boundary inaccuracies.
 - **Computational Efficiency:** Compare trainable parameters, peak GPU memory and inference time per slice.
 - **Engineering Assessment:** Assess segmentation reliability, computational trade-offs and requirements for practical deployment.
@@ -213,6 +213,8 @@ The implementation, results, observations and inferences are presented in subseq
 
 The baseline U-Net and Improved U-Net were implemented using PyTorch and trained for 20 epochs on the Rangpur HPC cluster using GPU acceleration.
 
+The models were trained using the Adam optimizer, a batch size of 4 and a learning rate(default) of 0.001.
+
 Both models used Cross-Entropy Loss for multi-class segmentation. The validation dataset was used to monitor training and select checkpoints, while the held-out test dataset was reserved for final evaluation.
 
 **Checkpoint Selection:** The checkpoint with the lowest validation loss was selected for each model rather than the final epoch. This criterion was used to favour generalisation while preventing test performance from influencing model selection.
@@ -223,7 +225,7 @@ Both architectures were evaluated on the same held-out test dataset, consisting 
 
 The evaluation considered overall segmentation performance, class-specific performance and computational efficiency to identify improvements and potential trade-offs.
 
-The strided-convolution ablation model was evaluated using the same test dataset and metrics to investigate the contribution of learnable downsampling.
+Both architectural ablation models were evaluated using the same test dataset and metrics. The first investigated the contribution of learnable downsampling by replacing max pooling with strided convolutions in the baseline U-Net. The second investigated the contribution of multi-resolution prediction fusion by removing it from the Improved U-Net.
 
 ### 6.3 Evaluation Metrics
 
@@ -243,11 +245,12 @@ Mean foreground segmentation metrics exclude the background class (Class 0).
 
 ### 6.4 Experimental Comparisons
 
-Three model configurations were evaluated:
+Four model configurations were evaluated:
 
 1. **Baseline U-Net:** Standard 2D U-Net using max-pooling downsampling.
 2. **Strided-Convolution Ablation:** Modified baseline U-Net with strided convolutions replacing max pooling.
 3. **Improved U-Net:** 2D architecture incorporating residual context modules, strided downsampling, localisation modules and multi-resolution prediction fusion.
+4. **Multi-Resolution Fusion Ablation:** Modified Improved U-Net with multi-resolution prediction fusion removed to investigate its contribution to segmentation performance.
 
 These comparisons assess whether the Improved U-Net's architectural changes provide sufficient improvements in segmentation quality and boundary reliability to justify their computational costs, helping determine its suitability for practical use.
 
@@ -326,7 +329,7 @@ Despite the baseline's stronger validation performance, the **Improved U-Net ach
 
 ### 7.3 Ablation 2: Removing Multi-Resolution Prediction Fusion
 
-**Hypothesis:** Combining predictions from multiple decoder resolutions may improve segmentation performance by incorporating information from different spatial scales. Removing this feature may reduce segmentation accuracy, particularly for smaller anatomical structures.
+**Hypothesis:** Combining predictions from multiple decoder resolutions may improve segmentation performance by incorporating information from different spatial scales. Removing this feature may reduce segmentation accuracy by limiting the contribution of predictions from different spatial resolutions.
 
 **Implementation:** Multi-resolution prediction fusion was removed from the Improved U-Net, allowing the model to generate predictions using only the final decoder output. The remaining architecture was kept unchanged. The model was trained for 20 epochs and evaluated on the same patient-independent test set.
 
@@ -346,7 +349,7 @@ Despite the baseline's stronger validation performance, the **Improved U-Net ach
 - The number of trainable parameters decreased by only **588**, while GPU memory usage and inference time remained almost identical.
 - Class-level performance also varied. Class 4 Dice increased from **0.8106 to 0.8252**, while Class 5 Dice decreased from **0.8309 to 0.8055**.
 
-**Inference:** Multi-resolution prediction fusion provided a small improvement in overall Dice and IoU, without substantially increasing computational requirements. Although Ablation 2 achieved slightly better boundary precision, the improvement was not sufficient to outweigh the reduction in overall segmentation overlap. Therefore, **retaining multi-resolution prediction fusion is preferred**, as it provides slightly better overall segmentation performance with almost no additional computational cost.
+**Inference:** Multi-resolution prediction fusion provided a small improvement in overall Dice and IoU, without substantially increasing computational requirements. Although Ablation 2 achieved slightly better boundary precision, the Improved U-Net was preferred based on its higher overall Dice and IoU. However, the differences were small, and further investigation is required to determine whether this advantage is consistent across patients. Therefore, **retaining multi-resolution prediction fusion is preferred** for the current implementation.
 
  ## 8. Failure Case Analysis
 
@@ -374,7 +377,7 @@ Five representative cases were selected to investigate missed segmentations, fal
 - Both models failed to detect a small Class 5 region present in the ground truth, resulting in a Dice score of **0** for both models.
 - The models were able to segment the surrounding larger regions more consistently.
 
-**Inference:** Both architectures face difficulties identifying certain small labelled regions. This suggests that further investigation into class representation and small-region segmentation may be beneficial.
+**Inference:** Both architectures face difficulties identifying certain small labelled regions. This suggests that further investigation into class representation and small-region segmentation may be beneficial. Such failures may be obscured by high average segmentation scores, highlighting the importance of examining individual slices alongside aggregate metrics.
 
 ### 8.2 False-Positive Predictions
 
@@ -435,7 +438,7 @@ The ablation studies helped determine whether individual architectural changes c
 
 Replacing max-pooling with strided convolution in the baseline U-Net produced only a marginal improvement in Dice, while increasing the parameter count and inference time. This suggests that changing the downsampling method alone does not provide a meaningful advantage.
 
-Removing multi-resolution prediction fusion from the Improved U-Net reduced mean foreground Dice from **0.9046 to 0.9026**, with almost no reduction in computational cost. Based on this result, I recommend retaining the fusion component.
+Removing multi-resolution prediction fusion from the Improved U-Net reduced mean foreground Dice from **0.9046 to 0.9026**, with almost no reduction in computational cost. Based on this result, I recommend retaining the fusion component. However, the model without fusion achieved slightly higher boundary precision (0.8314 compared with 0.8254), indicating that the fusion component did not improve every evaluation metric.
 
 Overall, the complete Improved U-Net performed better than the tested alternatives in terms of the balance between accuracy and efficiency.
 
@@ -449,22 +452,24 @@ Another consideration is the size of the test set. Although the evaluation inclu
 
 ### 9.4 Recommendation and Next Steps
 
-I recommend proceeding with the **Improved U-Net** for further research and optimisation. It provides slightly better overall segmentation results while requiring substantially less memory, fewer parameters and less inference time than the baseline.
+I recommend proceeding with the **Improved U-Net** for further research and optimisation. Although its improvement in mean foreground Dice over the baseline is relatively small (+0.0051), it achieves this result with 59.4% fewer parameters, 53.3% lower peak GPU memory consumption and 46.9% faster inference per slice. Compared with the two ablation models, the complete Improved U-Net also achieved the highest overall Dice and IoU. Therefore, its selection is primarily justified by the substantial computational savings achieved without compromising overall segmentation performance, rather than by a large improvement in segmentation accuracy.
 
 Before considering the model for practical use, I would prioritise evaluating it on more patients, testing consistency across repeated training runs, and investigating the errors observed in small regions and Class 4 predictions.
 
 Based on the current evidence, the Improved U-Net offers the best overall engineering trade-off among the four models evaluated. However, additional validation is required before it can be considered suitable for clinical applications.
 
+If developed further, the model should be considered as an annotation assistant whose predicted contours are reviewed and corrected by imaging specialists, rather than as an autonomous clinical segmentation system.
+
 ## 10. Project Structure and Reproducibility
 
-The repository contains the implementations of the four evaluated models, along with the code used for data preprocessing, training and evaluation.
+The repository contains the implementations of the baseline U-Net and Improved U-Net, along with the code used for data preprocessing, training, evaluation and visualisation. Two additional ablation experiments were conducted by modifying the existing architectures during experimentation.
 
 ### 10.1 Project Structure
 
 The project is organised into the following components:
 
 - **Dataset processing:** Loads MRI slices and their corresponding segmentation masks, performs normalisation and prepares the input tensors.
-- **Model implementations:** Contains the baseline U-Net, Improved U-Net and their ablation variants.
+- **Model implementations:** Contains the baseline U-Net and Improved U-Net architectures. The ablation experiments were conducted through temporary architectural modifications, with their results documented in the README.
 - **Training and evaluation:** Includes the scripts used to train the models, evaluate saved checkpoints and calculate performance metrics.
 - **Results and visualisations:** Contains training curves and segmentation comparisons used to support the experimental findings.
 
@@ -474,9 +479,33 @@ The experiments were conducted using PyTorch on the Rangpur computing cluster.
 
 To reproduce the experiments, the required dataset must be available, and the training and evaluation scripts must be configured with the appropriate dataset paths and model settings.
 
-The original experiments used patient-independent dataset partitions. The same partitions and evaluation settings should be maintained when comparing model performance.
+The following commands can be used from the project directory:
 
-The reported results were obtained from the saved model checkpoints. Additional runs may produce slightly different results due to variations in model initialisation and training conditions.
+**Train the Improved U-Net:**
+
+```bash
+python train.py --epochs 20 --output-dir checkpoints_improved_20
+```
+
+**Evaluate the trained Improved U-Net:**
+
+```bash
+python test.py
+```
+
+**Run prediction and generate a segmentation comparison:**
+
+```bash
+python predict.py --filename case_040_week_0_slice_38.nii.gz
+```
+
+The repository retains the final baseline and Improved U-Net implementations. The two ablation configurations are not maintained as separate model implementations; therefore, reproducing those experiments requires applying the architectural modifications described in Section 7.
+
+The original experiments used patient-independent dataset partitions consisting of 31 training patients, four validation patients and three test patients. The same partitions and evaluation settings should be maintained when comparing model performance.
+
+The reported results were obtained from saved model checkpoints. The original dataset and trained model checkpoints are not included in the repository due to storage and dataset distribution constraints.
+
+Additional training runs may produce slightly different results due to variations in model initialisation and training conditions. Further evaluation across multiple runs and additional patients is recommended to assess the consistency of the findings.
 
 ## 11. References and Dataset Acknowledgement
 
@@ -507,7 +536,6 @@ ChatGPT - https://chatgpt.com
 2. Verify the following code snippet and correct any errors.
 3. Help me understand the following code structure.
 
-## Declaration:
 ### Git Commit Authorship Declaration
 
 During this project, I realised that my local Git configuration was still using my brother's name and email address, as he had previously used my laptop. Unfortunately, I did not notice this earlier, so several of my commits were recorded under his name instead of mine.
@@ -517,3 +545,14 @@ I would like to clarify that I completed all the development, implementation, ex
 As soon as I noticed the issue, I contacted the teaching staff to explain the situation and ask for guidance. Following their advice, I corrected my local Git configuration so that my future commits would appear under my own name. I have not changed any of the previous commits. I have got permission for the same.
 
 The teaching staff confirmed that I could continue with my existing commit history and advised me to include a short declaration explaining the situation. I have also included screenshots of our discussion as supporting evidence and change of configuration.
+
+<p align="center">
+  <img src="authorship_declaration_screenshots/Declaration_img1.png" width="32%">
+  <img src="authorship_declaration_screenshots/Declaration%20img%202.png" width="32%">
+  <img src="authorship_declaration_screenshots/declaration%20img3.png" width="32%">
+</p>
+
+<p align="center">
+  <img src="authorship_declaration_screenshots/declaration%20img%204.png" width="48%">
+  <img src="authorship_declaration_screenshots/declaration%20img%205.png" width="48%">
+</p>
