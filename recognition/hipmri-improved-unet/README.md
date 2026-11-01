@@ -1,4 +1,4 @@
-# HipMRI Segmentation Using an Improved U-Net
+# HipMRI Segmentation Using an Improved U-Net (Normal)
 
 **Student Name:** Mahima Gokarnesan  
 **Student Number:** 49290967  
