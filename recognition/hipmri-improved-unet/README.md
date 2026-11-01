@@ -500,9 +500,9 @@ Overall, the complete Improved U-Net performed better than the tested alternativ
 
 ### 9.3 Reliability and Remaining Limitations
 
-The failure-case analysis showed that the Improved U-Net performed considerably better than the baseline on some challenging Class 5 regions. However, it also missed certain small regions and produced false-positive predictions.
+The failure-case analysis showed that the Improved U-Net performed considerably better than the baseline on some challenging prostate (Class 5) regions. However, it also missed certain small regions and produced false-positive predictions.
 
-The model also achieved a lower Dice score for Class 4 (**0.8106**) than the baseline (**0.8322**). This is an area that requires further investigation.
+The model also achieved a lower Dice score for the rectum (Class 4), with a score of **0.8106**, compared with **0.8322** for the baseline U-Net. This is an area that requires further investigation.
 
 Another consideration is the size of the test set. Although the evaluation included **540 slices**, these came from only **three patients**. The results are therefore promising but do not provide enough evidence to confirm that the model will perform consistently across a wider patient population.
 
