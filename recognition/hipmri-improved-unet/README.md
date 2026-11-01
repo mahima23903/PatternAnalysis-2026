@@ -315,9 +315,31 @@ Despite the baseline's stronger validation performance, the **Improved U-Net ach
 **Observation:**
 - The Improved U-Net achieved slightly better segmentation performance, with Dice increasing from **0.8995 to 0.9046**, IoU from **0.8260 to 0.8333**, and boundary precision from **0.8196 to 0.8254**.
 - Computational efficiency improved significantly, with **59.4% fewer parameters, 53.3% less peak GPU memory and 46.9% lower inference time per slice**.
-- However, improvements were not consistent across all classes. Class 5 Dice increased from **0.7868 to 0.8309**, while Class 4 Dice decreased from **0.8322 to 0.8106**.
+- However, improvements were not consistent across all classes. Prostate (Class 5) Dice increased from 0.7868 to 0.8309, while rectum (Class 4) Dice decreased from 0.8322 to 0.8106.
 
 **Inference:** The Improved U-Net offers a better balance between segmentation performance and computational efficiency, making it the stronger candidate for further development. However, the relatively small improvements in overall segmentation quality and differences across classes require further investigation before clinical deployment.
+
+#### 7.1.1 Class-wise Segmentation Performance and Prostate Evaluation
+
+The HipMRI dataset contains six segmentation labels representing the background, body, bone, bladder, rectum and prostate. The following table compares the class-wise Dice and IoU scores of the baseline U-Net and Improved U-Net on the held-out test dataset.
+
+| Class | Anatomical Region | Baseline Dice | Improved Dice | Baseline IoU | Improved IoU |
+|---|---|---:|---:|---:|---:|
+| 0 | Background | — | — | — | — |
+| 1 | Body | 0.9837 | 0.9840 | 0.9678 | 0.9684 |
+| 2 | Bone | 0.9339 | 0.9346 | 0.8760 | 0.8772 |
+| 3 | Bladder | 0.9611 | 0.9630 | 0.9251 | 0.9286 |
+| 4 | Rectum | 0.8322 | 0.8106 | 0.7126 | 0.6815 |
+| 5 | Prostate | 0.7868 | **0.8309** | 0.6485 | **0.7108** |
+
+**Prostate Segmentation Performance:**
+The assessment specifies a minimum Dice score of 0.75 for prostate segmentation. The baseline U-Net achieved a prostate Dice of 0.7868, while the Improved U-Net achieved 0.8309. Both models exceeded the required threshold, with the Improved U-Net exceeding it by 0.0809.
+
+The Improved U-Net increased prostate Dice by 0.0441 compared with the baseline. However, the improvement was not consistent across all classes, as rectum Dice decreased from 0.8322 to 0.8106.
+
+The reported Dice and IoU scores were calculated by accumulating intersections and pixel counts across the complete held-out test dataset rather than averaging individual slice scores.
+
+Although the Improved U-Net achieved the specified prostate Dice threshold under this dataset-level evaluation method, segmentation errors remain around anatomical boundaries. Further evaluation across additional patients would help assess the model's generalisation.
 
 ### 7.2 Ablation 1: Strided Convolution Downsampling
 
